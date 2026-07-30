@@ -28,6 +28,14 @@ final class App
         /** @var array<string,mixed> $config */
         $config = require $configPath;
 
+        // Overlay entity ids + discovered field/stage codes from provisioning, if present.
+        $generatedPath = dirname($configPath) . '/generated.php';
+        if (is_file($generatedPath)) {
+            /** @var array<string,mixed> $generated */
+            $generated = require $generatedPath;
+            $config = self::mergeGenerated($config, $generated);
+        }
+
         $auth = new Auth(
             $config['oauth']['client_id'],
             $config['oauth']['client_secret'],
@@ -37,6 +45,32 @@ final class App
         $client = new Client($auth, $config['oauth']['portal_domain']);
 
         return new self($config, $auth, $client);
+    }
+
+    /**
+     * Overlay provisioning output onto the base config. Discovered entity ids,
+     * field codes and stage ids win over the hand-written placeholders; anything
+     * provisioning didn't touch (oauth, authority_bands, current_fy) is preserved.
+     *
+     * @param array<string,mixed> $config
+     * @param array{entities?:array<string,int>,fields?:array<string,array<string,string>>,stages?:array<string,string>} $generated
+     * @return array<string,mixed>
+     */
+    private static function mergeGenerated(array $config, array $generated): array
+    {
+        if (!empty($generated['entities'])) {
+            $config['entities'] = array_merge($config['entities'] ?? [], $generated['entities']);
+        }
+        if (!empty($generated['stages'])) {
+            $config['stages'] = array_merge($config['stages'] ?? [], $generated['stages']);
+        }
+        if (!empty($generated['fields'])) {
+            foreach ($generated['fields'] as $entity => $codes) {
+                $config['fields'][$entity] = array_merge($config['fields'][$entity] ?? [], $codes);
+            }
+        }
+
+        return $config;
     }
 
     /**

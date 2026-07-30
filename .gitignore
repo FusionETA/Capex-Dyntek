@@ -5,6 +5,9 @@ capex-app/var/*
 # Local config carries client secret
 capex-app/config/app.php
 
+# Provisioning output — portal-specific entity ids + discovered field codes
+capex-app/config/generated.php
+
 # Dependencies (if an HTTP client is ever vendored via Composer)
 /vendor/
 composer.lock
