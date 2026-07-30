@@ -8,7 +8,7 @@ namespace Capex\Bitrix;
  * Thin REST wrapper over the Bitrix24 API. Plain cURL — no Composer packages
  * required. Auto-refreshes on expired_token via Auth.
  */
-final class Client
+final class Client implements ClientInterface
 {
     public function __construct(
         private readonly Auth $auth,

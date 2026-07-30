@@ -78,5 +78,24 @@ check('authority: small within -> HOD',
 check('authority: above top band -> GROUP_CFO',
     'GROUP_CFO', BudgetEngine::authorityFor(200_000_000, $within, $bands));
 
+// --- resum(): derived totals ---
+$totals = BudgetEngine::resum([30_000_000, 20_000_000], [10_000_000]);
+check('resum: committed = Σ approved', 50_000_000, $totals['committed']);
+check('resum: spent = Σ closed', 10_000_000, $totals['spent']);
+
+// --- resum(): replayed webhook is harmless (same inputs -> same totals) ---
+$again = BudgetEngine::resum([30_000_000, 20_000_000], [10_000_000]);
+check('resum: replay lands on identical totals', $totals, $again);
+
+// --- resum(): a rejected request (dropped from Approved) releases its commitment ---
+$afterReject = BudgetEngine::resum([20_000_000], [10_000_000]); // 30m request rejected
+check('resum: rejection releases commitment', 20_000_000, $afterReject['committed']);
+check('resum: rejection leaves spent untouched', 10_000_000, $afterReject['spent']);
+
+// --- resum(): empty envelope ---
+$empty = BudgetEngine::resum([], []);
+check('resum: empty -> zero committed', 0, $empty['committed']);
+check('resum: empty -> zero spent', 0, $empty['spent']);
+
 echo "\n{$tests} checks, {$failures} failure(s)\n";
 exit($failures === 0 ? 0 : 1);

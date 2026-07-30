@@ -21,6 +21,28 @@ final class BudgetEngine
         return $e->approvedSgd - $e->committedSgd - $e->spentSgd;
     }
 
+    /**
+     * Derive an envelope's committed + spent totals from its member records.
+     * Totals are re-summed, never incremented — so replaying a webhook or a manual
+     * Kanban drag lands on the same numbers, and a rejection (which removes a
+     * request from the Approved set) releases its commitment automatically.
+     *
+     * Year-end policy is LAPSE: the caller passes only the records belonging to
+     * this envelope's own FY, so unspent commitments do not carry across years.
+     * (Roll-forward would add the prior FY's unspent here — see Recalculator.)
+     *
+     * @param array<int,int> $approvedAmountsSgd amountSGD (cents) of each Approved request
+     * @param array<int,int> $closedAmountsSgd   amountSGD (cents) of each Closed request
+     * @return array{committed:int,spent:int}
+     */
+    public static function resum(array $approvedAmountsSgd, array $closedAmountsSgd): array
+    {
+        return [
+            'committed' => array_sum($approvedAmountsSgd),
+            'spent'     => array_sum($closedAmountsSgd),
+        ];
+    }
+
     /** Does $amountSgd fit within the envelope's remaining headroom? */
     public static function evaluate(int $amountSgd, Envelope $e): Verdict
     {

@@ -16,6 +16,11 @@ return [
         'portal_domain' => 'your-portal.bitrix24.com', // reject requests from any other member_id
     ],
 
+    // Fiscal year the app resolves envelopes against (region + FY is unique).
+    // Year-end policy is LAPSE — bump this at FY rollover; prior-FY commitments
+    // do not carry forward. See Service\Recalculator to switch to roll-forward.
+    'current_fy' => 2026,
+
     // Dynamic entity type ids (DT<id>). Read from the portal after creating the SPAs.
     'entities' => [
         'request'  => 0, // Capex Request  entityTypeId

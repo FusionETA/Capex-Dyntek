@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Capex\Repo;
 
-use Capex\Bitrix\Client;
+use Capex\Bitrix\ClientInterface;
+use Capex\Domain\Money;
 
 /**
  * crm.item.* wrapper for the Capex Request SPA.
@@ -13,10 +14,10 @@ use Capex\Bitrix\Client;
 final class Requests
 {
     /**
-     * @param array<string,mixed> $fields  keyed by config field code
+     * @param array<string,string> $fields keyed by config field code
      */
     public function __construct(
-        private readonly Client $client,
+        private readonly ClientInterface $client,
         private readonly int $entityTypeId,
         private readonly array $fields,
     ) {
@@ -31,6 +32,32 @@ final class Requests
         ]);
 
         return $res['result']['items'] ?? [];
+    }
+
+    /**
+     * amountSGD (integer cents) of every request in $stageId linked to $envelopeId.
+     * The envelope filter is what enforces the LAPSE policy — only this envelope's
+     * (and therefore this FY's) requests are summed.
+     *
+     * @return array<int,int>
+     */
+    public function amountsSgdInStageForEnvelope(string $stageId, int $envelopeId): array
+    {
+        $res = $this->client->call('crm.item.list', [
+            'entityTypeId' => $this->entityTypeId,
+            'filter'       => [
+                'stageId'                     => $stageId,
+                $this->fields['envelope_id'] => $envelopeId,
+            ],
+            'select' => ['id', $this->fields['amount_sgd']],
+        ]);
+
+        $items = $res['result']['items'] ?? [];
+
+        return array_map(
+            fn (array $it): int => Money::fieldToCents($it[$this->fields['amount_sgd']] ?? null),
+            $items,
+        );
     }
 
     /** @return array<string,mixed> */

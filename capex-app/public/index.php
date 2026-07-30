@@ -32,7 +32,7 @@ $router = new Router();
 // Screens (placements) — each handler re-checks Bitrix rights server-side.
 $router->add('/', static fn () => (new Dashboard())->handle());
 $router->add('/dashboard', static fn () => (new Dashboard())->handle());
-$router->add('/webhook', static fn () => (new Webhook())->handle());
+$router->add('/webhook', static fn () => (new Webhook($app))->handle());
 $router->add('/diag', static fn () => (new Diag($app))->handle());
 
 // Support both PATH_INFO (…/index.php/webhook) and a plain path.
