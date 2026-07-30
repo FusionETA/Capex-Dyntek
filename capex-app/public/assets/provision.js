@@ -34,7 +34,12 @@
 
     // Bitrix UF user-type ids. 'text' is a multiline string; 'money' is a CRM type.
     function userType(t) { return t === 'text' ? 'string' : t; }
-    function fieldSettings(t) { return t === 'text' ? { ROWS: 4 } : {}; }
+    // 'double' defaults to PRECISION 0 (rounds to integer!) — set it so FX rates keep decimals.
+    function fieldSettings(t) {
+        if (t === 'text') { return { ROWS: 4 }; }
+        if (t === 'double') { return { PRECISION: 6 }; }
+        return {};
+    }
 
     // Find a dynamic type by title, else create it. Returns {entityTypeId, typeId}.
     function ensureType(title) {
