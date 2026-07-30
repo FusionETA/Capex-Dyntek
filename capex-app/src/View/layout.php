@@ -14,7 +14,11 @@ $__idx  = $__base . '/index.php';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($__title) ?></title>
-    <link rel="stylesheet" href="<?= e($__base) ?>/assets/app.css">
+    <?php // Inline the CSS — an external <link> can fail when Bitrix24 embeds the app
+          // (CSP, cache, or a stripped <head>). Inlining styles the page unconditionally.
+          $__css = @file_get_contents(__DIR__ . '/../../public/assets/app.css'); ?>
+    <style><?= $__css !== false ? $__css : '' ?></style>
+    <script src="//api.bitrix24.com/api/v1/"></script>
 </head>
 <body>
     <nav class="capex-nav">
@@ -26,5 +30,8 @@ $__idx  = $__base . '/index.php';
     <main class="capex-screen">
         <?php extract($data); include $__view; ?>
     </main>
+    <script>
+        if (typeof BX24 !== 'undefined') { BX24.init(function () { BX24.fitWindow(); }); }
+    </script>
 </body>
 </html>
