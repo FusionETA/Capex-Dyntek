@@ -35,9 +35,11 @@ $app->auth->store($accessToken, $refreshToken, time() + $expiresIn, $memberId);
 
 // Schema drives the browser provisioning; handler base drives placement/event binds.
 $schema = require __DIR__ . '/../config/schema.php';
-$scheme = ($_SERVER['REQUEST_SCHEME'] ?? 'https');
 $host   = ($_SERVER['HTTP_HOST'] ?? '');
 $dir    = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/install.php')), '/');
+// Default https (Bitrix requires https handlers; proxies may not set HTTPS).
+$isLocal = (bool) preg_match('/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/', $host);
+$scheme  = $isLocal ? 'http' : (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') ?: 'https');
 $handlerBase = sprintf('%s://%s%s', $scheme, $host, $dir); // .../public
 
 header('Content-Type: text/html; charset=utf-8');
@@ -47,7 +49,7 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Capex — install</title>
-    <link rel="stylesheet" href="assets/app.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($handlerBase, ENT_QUOTES) ?>/assets/app.css">
     <script src="//api.bitrix24.com/api/v1/"></script>
 </head>
 <body>
@@ -64,6 +66,6 @@ header('Content-Type: text/html; charset=utf-8');
             handlerBase: <?= json_encode($handlerBase, JSON_UNESCAPED_SLASHES) ?>
         };
     </script>
-    <script src="assets/provision.js"></script>
+    <script src="<?= htmlspecialchars($handlerBase, ENT_QUOTES) ?>/assets/provision.js"></script>
 </body>
 </html>
