@@ -28,6 +28,7 @@ $__mq = ($__member ?? '') !== '' ? '&amp;member_id=' . rawurlencode($__member) :
         <a href="<?= e($__idx) ?>?screen=dashboard<?= $__mq ?>" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
         <a href="<?= e($__idx) ?>?screen=budget<?= $__mq ?>" class="<?= $__active === 'budget' ? 'active' : '' ?>">Budget</a>
         <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Targets</a>
+        <a href="<?= e($__idx) ?>?screen=new<?= $__mq ?>" class="nav-cta <?= $__active === 'new' ? 'active' : '' ?>">+ New request</a>
     </nav>
     <main class="capex-screen">
         <?php extract($data); include $__view; ?>

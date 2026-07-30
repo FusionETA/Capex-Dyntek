@@ -16,6 +16,7 @@ use Capex\App;
 use Capex\Http\Handlers\Budget;
 use Capex\Http\Handlers\Dashboard;
 use Capex\Http\Handlers\Diag;
+use Capex\Http\Handlers\NewRequest;
 use Capex\Http\Handlers\Targets;
 use Capex\Http\Handlers\Webhook;
 
@@ -44,9 +45,10 @@ if ($path === '/diag') {
 }
 
 // User-facing screens.
-$screen = (string) ($_GET['screen'] ?? 'dashboard');
+$screen = (string) ($_REQUEST['screen'] ?? 'dashboard');
 match ($screen) {
     'budget'  => (new Budget($app))->handle(),
     'targets' => (new Targets($app))->handle(),
+    'new'     => (new NewRequest($app))->handle(),
     default   => (new Dashboard($app))->handle(),
 };

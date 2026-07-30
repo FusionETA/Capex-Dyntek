@@ -91,6 +91,27 @@ h1 { font-size: 1.4rem; margin: 0 0 4px; }
 .rank-title { flex: 1; }
 .rank-amt { font-weight: 600; font-variant-numeric: tabular-nums; }
 
+.capex-nav a.nav-cta { margin-left: auto; color: var(--accent); font-weight: 600; }
+
+/* Forms */
+.capex-form { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.capex-form label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.capex-form input, .capex-form select, .capex-form textarea {
+    font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--ink); background: #fff; width: 100%;
+}
+.capex-form input:focus, .capex-form select:focus, .capex-form textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.capex-form .req { color: var(--over); }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.form-actions { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.btn-primary {
+    font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff; padding: 9px 18px;
+}
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-link { color: var(--muted); text-decoration: none; }
+.btn-link:hover { color: var(--ink); }
+
 /* Install / provisioning progress */
 .capex-install { padding: 24px; max-width: 720px; margin: 0 auto; }
 .capex-log { list-style: none; padding: 0; margin: 16px 0; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }

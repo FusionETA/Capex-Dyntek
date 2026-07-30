@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Capex\Http\Handlers;
 
 use Capex\App;
-use Capex\Domain\BudgetEngine;
-use Capex\Domain\Money;
-use Capex\Service\Recalculator;
+use Capex\Service\RequestProcessor;
 
 /**
  * Handles onCrmDynamicItemUpdate for the Capex Request entity (build plan §4.3):
@@ -45,50 +43,9 @@ final class Webhook
             return;
         }
 
-        $requests  = $this->app->requests();
-        $envelopes = $this->app->envelopes();
-        $recalc    = new Recalculator($requests, $envelopes, $this->app->config['stages']);
-
-        $item = $requests->get($id);
-        if ($item === []) {
-            $this->ok("ignored: request {$id} not found");
-            return;
-        }
-
-        $f = $this->app->config['fields']['request'];
-        $region = (string) ($item[$f['region']] ?? '');
-        $fy = (int) ($this->app->config['current_fy'] ?? 0);
-
-        $envelope = $envelopes->find($region, $fy);
-        if ($envelope === null) {
-            $this->ok("ignored: no envelope for {$region} FY{$fy}");
-            return;
-        }
-
-        // Convert the requester's local amount to SGD at the envelope's FX rate.
-        $amountLocalCents = Money::fieldToCents($item[$f['amount_local']] ?? null);
-        $amountSgd = Money::toSGD($amountLocalCents, $envelope->fxRateToSgd);
-
-        $verdict = BudgetEngine::evaluate($amountSgd, $envelope);
-
-        // Write the app-owned fields back onto the request.
-        $requests->update($id, [
-            $f['amount_sgd']     => Money::format($amountSgd),
-            $f['envelope_id']    => $envelope->id,
-            $f['budget_verdict'] => $verdict->status,
-            $f['over_by_sgd']    => Money::format($verdict->overBySgd),
-        ]);
-
-        // Re-derive the envelope totals from live records (replay-safe).
-        $totals = $recalc->recalc($envelope);
-
-        $this->ok(sprintf(
-            'request %d: %s, committed=%s spent=%s',
-            $id,
-            $verdict->status,
-            Money::format($totals['committed']),
-            Money::format($totals['spent']),
-        ));
+        // Same budget side-effects as an in-app submission (shared service).
+        $result = (new RequestProcessor($this->app))->process($id);
+        $this->ok($result['message']);
     }
 
     private function ok(string $message): void
