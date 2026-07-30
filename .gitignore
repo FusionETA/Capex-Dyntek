@@ -1,0 +1,16 @@
+# Runtime state — never commit secrets, tokens, or logs
+capex-app/var/*
+!capex-app/var/.gitkeep
+
+# Local config carries client secret
+capex-app/config/app.php
+
+# Dependencies (if an HTTP client is ever vendored via Composer)
+/vendor/
+composer.lock
+
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/

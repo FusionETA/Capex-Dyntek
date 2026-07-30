@@ -1,0 +1,81 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Copy to app.php and fill in. app.php is gitignored (carries the client secret).
+ *
+ * Field codes captured here are the ONLY place field/entity codes live — no
+ * string literals in logic. See build plan §3.
+ */
+
+return [
+    'oauth' => [
+        'client_id'     => 'local.xxxxxxxxxxxxxx',
+        'client_secret' => 'CHANGE_ME',
+        'portal_domain' => 'your-portal.bitrix24.com', // reject requests from any other member_id
+    ],
+
+    // Dynamic entity type ids (DT<id>). Read from the portal after creating the SPAs.
+    'entities' => [
+        'request'  => 0, // Capex Request  entityTypeId
+        'envelope' => 0, // Budget Envelope entityTypeId
+        'target'   => 0, // Sales Target    entityTypeId
+    ],
+
+    // Stage codes for Capex Request (single pipeline). Fill <id> with the request entityTypeId.
+    'stages' => [
+        'draft'          => 'DT<id>_1:NEW',
+        'submitted'      => 'DT<id>_1:PREPARATION',
+        'hod_review'     => 'DT<id>_1:CLIENT',     // Gate A
+        'finance_review' => 'DT<id>_1:UC_FIN',     // Gate B
+        'approved'       => 'DT<id>_1:SUCCESS',
+        'closed'         => 'DT<id>_1:UC_CLOSED',
+        'rejected'       => 'DT<id>_1:FAIL',
+    ],
+
+    // Capex Request fields
+    'fields' => [
+        'request' => [
+            'req_code'         => 'ufCrm_REQ_CODE',
+            'region'           => 'ufCrm_REGION',
+            'cost_centre'      => 'ufCrm_COST_CENTRE',
+            'category'         => 'ufCrm_CATEGORY',
+            'amount_local'     => 'ufCrm_AMOUNT_LOCAL',
+            'currency'         => 'ufCrm_CURRENCY',
+            'amount_sgd'       => 'ufCrm_AMOUNT_SGD',      // app-written
+            'justification'    => 'ufCrm_JUSTIFICATION',
+            'payback_months'   => 'ufCrm_PAYBACK_MONTHS',
+            'envelope_id'      => 'ufCrm_ENVELOPE_ID',     // app-written
+            'budget_verdict'   => 'ufCrm_BUDGET_VERDICT',  // app-written: WITHIN / OVER
+            'over_by_sgd'      => 'ufCrm_OVER_BY_SGD',      // app-written
+            'reallocation_note'=> 'ufCrm_REALLOCATION_NOTE',
+            'gl_code'          => 'ufCrm_GL_CODE',
+        ],
+        'envelope' => [
+            'region'        => 'ufCrm_REGION',
+            'fy'            => 'ufCrm_FY',
+            'approved_sgd'  => 'ufCrm_APPROVED_SGD',
+            'committed_sgd' => 'ufCrm_COMMITTED_SGD', // app-written
+            'spent_sgd'     => 'ufCrm_SPENT_SGD',      // app-written
+            'fx_rate_to_sgd'=> 'ufCrm_FX_RATE_TO_SGD',
+            'status'        => 'ufCrm_STATUS',         // draft / locked
+        ],
+        'target' => [
+            'region'     => 'ufCrm_REGION',
+            'period'     => 'ufCrm_PERIOD',
+            'target_sgd' => 'ufCrm_TARGET_SGD',
+            'actual_sgd' => 'ufCrm_ACTUAL_SGD',
+        ],
+    ],
+
+    // Delegation-of-authority bands in SGD cents. Placeholders — confirm before M5 (open item #1).
+    'authority_bands' => [
+        5_000_000    => 'HOD',        // <= 50k
+        25_000_000   => 'REGIONAL_FIN',
+        100_000_000  => 'COUNTRY_MD',
+        // above => GROUP_CFO ; any OVER verdict => GROUP_CFO regardless of amount
+    ],
+
+    'webhook_token' => 'CHANGE_ME', // shared secret verified on inbound onCrmDynamicItemUpdate
+];
