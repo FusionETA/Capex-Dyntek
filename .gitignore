@@ -2,11 +2,14 @@
 capex-app/var/*
 !capex-app/var/.gitkeep
 
-# Local config carries client secret
+# Local config carries client secret (per-env: app.test.php, app.prod.php, …)
 capex-app/config/app.php
+capex-app/config/app.*.php
+!capex-app/config/app.php.example
 
 # Provisioning output — portal-specific entity ids + discovered field codes
 capex-app/config/generated.php
+capex-app/config/generated.*.php
 
 # Dependencies (if an HTTP client is ever vendored via Composer)
 /vendor/

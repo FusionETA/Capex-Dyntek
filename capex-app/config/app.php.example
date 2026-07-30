@@ -3,10 +3,16 @@
 declare(strict_types=1);
 
 /**
- * Copy to app.php and fill in. app.php is gitignored (carries the client secret).
+ * Copy to the per-environment config for each portal and fill in:
+ *   config/app.test.php   → Fusion test portal   (APP_ENV=test)
+ *   config/app.prod.php   → Dyntek prod portal    (APP_ENV=prod, the default)
+ * (A plain config/app.php still works as a single-portal fallback.)
+ * All are gitignored — they carry the client secret.
  *
  * Field codes captured here are the ONLY place field/entity codes live — no
- * string literals in logic. See build plan §3.
+ * string literals in logic. Entity ids + field codes are filled by provisioning
+ * (bin/provision.php writes config/generated.<env>.php); leave them at 0 here.
+ * See build plan §3.
  */
 
 return [

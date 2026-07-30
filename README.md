@@ -53,6 +53,27 @@ Bitrix24 owns the data; the app is a tenant of it. Two distinct steps:
 
 Deleting the app removes placements + the webhook binding only — the SPAs and records remain.
 
+### Environments (test vs prod portal)
+
+A Local Application is tied to one portal, so the Fusion test portal and the Dyntek prod
+portal each need their **own** Local App registration (separate client id/secret). The app
+keeps them isolated via `APP_ENV`:
+
+| APP_ENV | Config | Token store | Generated codes |
+|---|---|---|---|
+| `test` | `config/app.test.php` | `var/tokens.test.sqlite` | `config/generated.test.php` |
+| `prod` (default) | `config/app.prod.php` (or legacy `app.php`) | `var/tokens.prod.sqlite` (or `tokens.sqlite`) | `generated.prod.php` |
+
+Set it per deployment in `.htaccess` (or the vhost):
+
+```apache
+SetEnv APP_ENV test
+```
+
+Same code, promoted test → prod by changing that one line. Each env installs, provisions and
+stores tokens independently — nothing crosses over. With no `APP_ENV` set it falls back to the
+legacy single-portal filenames, so existing setups keep working.
+
 ## Rules for whoever codes this
 
 - Currency is **integer cents** everywhere. No floats.

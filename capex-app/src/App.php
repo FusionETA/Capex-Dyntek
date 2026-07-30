@@ -19,32 +19,84 @@ final class App
         public readonly array $config,
         public readonly Auth $auth,
         public readonly Client $client,
+        public readonly string $env,
+        public readonly string $generatedPath,
     ) {
     }
 
-    public static function boot(?string $configPath = null): self
+    /**
+     * Boot for a named environment (test / prod / …). When $env is null it is
+     * resolved from the APP_ENV env var, defaulting to 'prod'. Each environment
+     * gets its own config file, token store and generated codes, so the Fusion
+     * test portal and the Dyntek prod portal never share state.
+     */
+    public static function boot(?string $env = null): self
     {
-        $configPath ??= __DIR__ . '/../config/app.php';
+        $env ??= self::resolveEnv();
+        $paths = self::paths(__DIR__ . '/../config', __DIR__ . '/../var', $env);
+
         /** @var array<string,mixed> $config */
-        $config = require $configPath;
+        $config = require $paths['config'];
 
         // Overlay entity ids + discovered field/stage codes from provisioning, if present.
-        $generatedPath = dirname($configPath) . '/generated.php';
-        if (is_file($generatedPath)) {
+        if (is_file($paths['generated'])) {
             /** @var array<string,mixed> $generated */
-            $generated = require $generatedPath;
+            $generated = require $paths['generated'];
             $config = self::mergeGenerated($config, $generated);
         }
 
         $auth = new Auth(
             $config['oauth']['client_id'],
             $config['oauth']['client_secret'],
-            __DIR__ . '/../var/tokens.sqlite',
+            $paths['tokens'],
         );
 
         $client = new Client($auth, $config['oauth']['portal_domain']);
 
-        return new self($config, $auth, $client);
+        return new self($config, $auth, $client, $env, $paths['generated']);
+    }
+
+    /**
+     * Resolve the active environment from APP_ENV (env var or SetEnv), sanitised
+     * to a safe slug so it can't escape the config/var directories. Defaults to
+     * 'prod' — the safe assumption for an un-flagged deployment.
+     */
+    public static function resolveEnv(): string
+    {
+        $raw = getenv('APP_ENV');
+        if ($raw === false || $raw === '') {
+            $raw = (string) ($_SERVER['APP_ENV'] ?? '');
+        }
+
+        $slug = strtolower(preg_replace('/[^A-Za-z0-9_]/', '', $raw) ?? '');
+
+        return $slug !== '' ? $slug : 'prod';
+    }
+
+    /**
+     * Resolve the per-environment file paths. If an env-specific config exists
+     * (app.<env>.php) its sibling token store and generated file are used;
+     * otherwise the legacy single-env names (app.php / tokens.sqlite) apply, so
+     * existing single-portal setups keep working.
+     *
+     * @return array{config:string,generated:string,tokens:string}
+     */
+    public static function paths(string $configDir, string $varDir, string $env): array
+    {
+        $envConfig = "{$configDir}/app.{$env}.php";
+        if (is_file($envConfig)) {
+            return [
+                'config'    => $envConfig,
+                'generated' => "{$configDir}/generated.{$env}.php",
+                'tokens'    => "{$varDir}/tokens.{$env}.sqlite",
+            ];
+        }
+
+        return [
+            'config'    => "{$configDir}/app.php",
+            'generated' => "{$configDir}/generated.php",
+            'tokens'    => "{$varDir}/tokens.sqlite",
+        ];
     }
 
     /**
