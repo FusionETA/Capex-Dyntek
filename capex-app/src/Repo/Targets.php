@@ -29,4 +29,12 @@ final class Targets
 
         return $res['result']['items'] ?? [];
     }
+
+    /** @return array<int,array<string,mixed>> */
+    public function all(): array
+    {
+        $res = $this->client->call('crm.item.list', ['entityTypeId' => $this->entityTypeId]);
+
+        return $res['result']['items'] ?? [];
+    }
 }

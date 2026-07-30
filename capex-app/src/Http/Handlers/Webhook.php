@@ -7,8 +7,6 @@ namespace Capex\Http\Handlers;
 use Capex\App;
 use Capex\Domain\BudgetEngine;
 use Capex\Domain\Money;
-use Capex\Repo\Envelopes;
-use Capex\Repo\Requests;
 use Capex\Service\Recalculator;
 
 /**
@@ -47,7 +45,9 @@ final class Webhook
             return;
         }
 
-        [$requests, $envelopes, $recalc] = $this->wire();
+        $requests  = $this->app->requests();
+        $envelopes = $this->app->envelopes();
+        $recalc    = new Recalculator($requests, $envelopes, $this->app->config['stages']);
 
         $item = $requests->get($id);
         if ($item === []) {
@@ -89,24 +89,6 @@ final class Webhook
             Money::format($totals['committed']),
             Money::format($totals['spent']),
         ));
-    }
-
-    /**
-     * Build the repos + recalculator from config. Kept here (not in App) because
-     * only the request-processing handlers need them.
-     *
-     * @return array{0:Requests,1:Envelopes,2:Recalculator}
-     */
-    private function wire(): array
-    {
-        $entities = $this->app->config['entities'];
-        $fields = $this->app->config['fields'];
-
-        $requests = new Requests($this->app->client, (int) $entities['request'], $fields['request']);
-        $envelopes = new Envelopes($this->app->client, (int) $entities['envelope'], $fields['envelope']);
-        $recalc = new Recalculator($requests, $envelopes, $this->app->config['stages']);
-
-        return [$requests, $envelopes, $recalc];
     }
 
     private function ok(string $message): void

@@ -139,20 +139,29 @@
         });
     }
 
-    // Bind the dashboard placement + the update webhook.
+    // Bind the three screen placements + the update webhook.
     function bindPlacementsAndEvents(requestEntityTypeId) {
-        var dashUrl = HANDLER + '/index.php';
-        var hookUrl = HANDLER + '/index.php/webhook';
-        return call('placement.bind', {
-            PLACEMENT: 'CRM_DYNAMIC_' + requestEntityTypeId + '_LIST_MENU',
-            HANDLER: dashUrl,
-            TITLE: 'Capex Dashboard'
-        }).catch(function (e) { log('placement skipped: ' + e.message, 'warn'); })
-        .then(function () {
-            return call('event.bind', { event: 'onCrmDynamicItemUpdate', handler: hookUrl })
-                .then(function () { log('webhook bound', 'ok'); })
-                .catch(function (e) { log('event.bind skipped: ' + e.message, 'warn'); });
-        });
+        var idx = HANDLER + '/index.php';
+        var placements = [
+            { PLACEMENT: 'CRM_DYNAMIC_' + requestEntityTypeId + '_LIST_MENU', HANDLER: idx + '?screen=dashboard', TITLE: 'Capex Dashboard' },
+            { PLACEMENT: 'LEFT_MENU', HANDLER: idx + '?screen=budget',  TITLE: 'Capex Budget' },
+            { PLACEMENT: 'LEFT_MENU', HANDLER: idx + '?screen=targets', TITLE: 'Capex Targets' }
+        ];
+
+        var i = 0;
+        function nextPlacement() {
+            if (i >= placements.length) {
+                return call('event.bind', { event: 'onCrmDynamicItemUpdate', handler: idx + '/webhook' })
+                    .then(function () { log('webhook bound', 'ok'); })
+                    .catch(function (e) { log('event.bind skipped: ' + e.message, 'warn'); });
+            }
+            var p = placements[i++];
+            return call('placement.bind', p)
+                .then(function () { log('placement: ' + p.TITLE, 'ok'); })
+                .catch(function (e) { log('placement skipped (' + p.TITLE + '): ' + e.message, 'warn'); })
+                .then(nextPlacement);
+        }
+        return nextPlacement();
     }
 
     function run() {

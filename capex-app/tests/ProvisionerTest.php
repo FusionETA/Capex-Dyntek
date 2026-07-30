@@ -112,8 +112,8 @@ check('envelope committed field resolved', true, ($gen['fields']['envelope']['co
 
 // stages -> full DT ids on the request category (230)
 check('finance_review stage id', 'DT1292_230:UC_FIN', $gen['stages']['finance_review']);
-check('approved stage id', 'DT1292_230:SUCCESS', $gen['stages']['approved']);
-check('closed stage id', 'DT1292_230:UC_CLOSED', $gen['stages']['closed']);
+check('approved stage id (mid-pipeline custom)', 'DT1292_230:UC_APPROVED', $gen['stages']['approved']);
+check('closed stage id (terminal SUCCESS)', 'DT1292_230:SUCCESS', $gen['stages']['closed']);
 
 echo "\n{$tests} checks, {$failures} failure(s)\n";
 exit($failures === 0 ? 0 : 1);

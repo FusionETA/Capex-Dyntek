@@ -8,10 +8,10 @@ use Capex\App;
 use Capex\Service\ScreenData;
 
 /**
- * Dashboard screen — regional KPIs, sales-target progress, approved capex ranking.
- * Visible to all portal users; still re-checks the caller server-side.
+ * Targets screen — sales target vs actual per region/period. Finance-maintained
+ * in Bitrix24; read-only here.
  */
-final class Dashboard
+final class Targets
 {
     public function __construct(private readonly App $app)
     {
@@ -27,8 +27,8 @@ final class Dashboard
         }
 
         try {
-            $data = (new ScreenData($this->app))->dashboard();
-            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data);
+            $data = (new ScreenData($this->app))->targets();
+            capex_render('targets', 'Capex Targets', 'targets', $data);
         } catch (\Throwable $e) {
             capex_error($e);
         }

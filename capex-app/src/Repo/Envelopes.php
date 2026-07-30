@@ -38,6 +38,17 @@ final class Envelopes
         return $item ? $this->hydrate($item) : null;
     }
 
+    /** Every envelope, hydrated. @return array<int,Envelope> */
+    public function all(): array
+    {
+        $res = $this->client->call('crm.item.list', ['entityTypeId' => $this->entityTypeId]);
+
+        return array_map(
+            fn (array $item): Envelope => $this->hydrate($item),
+            $res['result']['items'] ?? [],
+        );
+    }
+
     public function getById(int $id): ?Envelope
     {
         $res = $this->client->call('crm.item.get', [

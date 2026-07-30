@@ -8,10 +8,10 @@ use Capex\App;
 use Capex\Service\ScreenData;
 
 /**
- * Dashboard screen — regional KPIs, sales-target progress, approved capex ranking.
- * Visible to all portal users; still re-checks the caller server-side.
+ * Budget screen — envelope vs committed vs spent per region, over-budget alert.
+ * Read-only view; envelopes are edited in Bitrix24 under its own permissions.
  */
-final class Dashboard
+final class Budget
 {
     public function __construct(private readonly App $app)
     {
@@ -27,8 +27,8 @@ final class Dashboard
         }
 
         try {
-            $data = (new ScreenData($this->app))->dashboard();
-            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data);
+            $data = (new ScreenData($this->app))->budget();
+            capex_render('budget', 'Capex Budget', 'budget', $data);
         } catch (\Throwable $e) {
             capex_error($e);
         }

@@ -6,6 +6,9 @@ namespace Capex;
 
 use Capex\Bitrix\Auth;
 use Capex\Bitrix\Client;
+use Capex\Repo\Envelopes;
+use Capex\Repo\Requests;
+use Capex\Repo\Targets;
 
 /**
  * Tiny composition root. Loads config once and wires Auth + Client so the entry
@@ -123,6 +126,21 @@ final class App
         }
 
         return $config;
+    }
+
+    public function requests(): Requests
+    {
+        return new Requests($this->client, (int) $this->config['entities']['request'], $this->config['fields']['request']);
+    }
+
+    public function envelopes(): Envelopes
+    {
+        return new Envelopes($this->client, (int) $this->config['entities']['envelope'], $this->config['fields']['envelope']);
+    }
+
+    public function targets(): Targets
+    {
+        return new Targets($this->client, (int) $this->config['entities']['target'], $this->config['fields']['target']);
     }
 
     /**

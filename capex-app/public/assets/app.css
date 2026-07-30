@@ -37,6 +37,60 @@ h1 { font-size: 1.4rem; margin: 0 0 4px; }
 .verdict-over { color: var(--over); font-weight: 600; }
 .verdict-within { color: var(--within); font-weight: 600; }
 
+/* Nav */
+.capex-nav {
+    display: flex; align-items: center; gap: 18px;
+    padding: 12px 24px; background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+}
+.capex-brand { font-weight: 700; color: var(--accent); margin-right: 8px; }
+.capex-nav a { color: var(--muted); text-decoration: none; font-weight: 500; padding: 4px 2px; border-bottom: 2px solid transparent; }
+.capex-nav a:hover { color: var(--ink); }
+.capex-nav a.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+.capex-screen { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.capex-screen h1 { font-size: 1.4rem; margin: 0 0 4px; }
+.capex-screen h2 { font-size: 1.05rem; margin: 0 0 12px; }
+
+/* KPI row */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+.kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.kpi-label { color: var(--muted); font-size: .8rem; }
+.kpi-val { font-size: 1.25rem; font-weight: 700; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+.card { margin: 16px 0; }
+.card h2 { margin-bottom: 12px; }
+
+/* Grid tables */
+.grid { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.grid th, .grid td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.grid th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+.grid td.num, .grid th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.grid th.util { width: 180px; }
+.grid tr.row-over td { background: rgba(214, 69, 69, .05); }
+
+/* Utilisation bar */
+.util { display: flex; align-items: center; gap: 8px; }
+.bar { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.bar-fill.over { background: var(--over); }
+.util-pct { color: var(--muted); font-size: .8rem; min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); font-size: .75rem; color: var(--muted); }
+
+.alert { background: rgba(214,69,69,.08); border: 1px solid rgba(214,69,69,.3); color: var(--over); padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; font-weight: 500; }
+
+/* Ranking list */
+.ranking { list-style: none; counter-reset: rank; padding: 0; margin: 0; }
+.ranking li { counter-increment: rank; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ranking li::before { content: counter(rank); color: var(--muted); font-weight: 700; min-width: 20px; }
+.rank-title { flex: 1; }
+.rank-amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+
 /* Install / provisioning progress */
 .capex-install { padding: 24px; max-width: 720px; margin: 0 auto; }
 .capex-log { list-style: none; padding: 0; margin: 16px 0; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
