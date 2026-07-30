@@ -34,6 +34,66 @@ final class Provisioner
     }
 
     /**
+     * Read-only discovery — the server-side path used AFTER the browser (BX24) has
+     * created the types/fields/stages. Finds each type by title, maps every schema
+     * field key to the REST code Bitrix assigned (matched by title), and builds the
+     * semantic stage-id map. Creates nothing, so it needs no admin session.
+     *
+     * @return array{entities:array<string,int>,fields:array<string,array<string,string>>,stages:array<string,string>}
+     */
+    public function discover(): array
+    {
+        $entities = [];
+        $fields = [];
+        $stages = [];
+
+        foreach ($this->schema as $key => $spec) {
+            $entityTypeId = $this->findType((string) $spec['title']);
+            if ($entityTypeId === 0) {
+                $this->note("WARN: type '{$spec['title']}' not found — run the browser install first");
+                continue;
+            }
+
+            $entities[$key] = $entityTypeId;
+            $this->note("type '{$spec['title']}' (#{$entityTypeId})");
+            $fields[$key] = $this->discoverFieldCodes($entityTypeId, $spec['fields']);
+
+            if (!empty($spec['stages'])) {
+                $stages = $this->discoverStages($entityTypeId, $spec['stages']);
+            }
+        }
+
+        return ['entities' => $entities, 'fields' => $fields, 'stages' => $stages];
+    }
+
+    /** Find a dynamic type's entityTypeId by title (read-only). 0 if absent. */
+    private function findType(string $title): int
+    {
+        $res = $this->client->call('crm.type.list', ['filter' => ['title' => $title]]);
+
+        return (int) ($res['result']['types'][0]['entityTypeId'] ?? 0);
+    }
+
+    /**
+     * Build semantic key => full stageId (e.g. 'finance_review' => 'DT1292_230:UC_FIN')
+     * from the schema statuses and the type's default category.
+     *
+     * @param array<string,array<string,mixed>> $stages
+     * @return array<string,string>
+     */
+    private function discoverStages(int $entityTypeId, array $stages): array
+    {
+        $categoryId = $this->defaultCategoryId($entityTypeId);
+
+        $map = [];
+        foreach ($stages as $semantic => $s) {
+            $map[$semantic] = "DT{$entityTypeId}_{$categoryId}:{$s['status']}";
+        }
+
+        return $map;
+    }
+
+    /**
      * Apply the schema and return the discovered mapping:
      *   ['entities'=>[key=>id], 'fields'=>[key=>[fieldKey=>code]], 'stages'=>[semantic=>stageId]]
      *
@@ -196,30 +256,28 @@ final class Provisioner
         }
 
         $map = [];
-        $sort = 100;
-        foreach ($stages as $semantic => [$suffix, $name]) {
-            $statusId = "DT{$entityTypeId}_{$categoryId}:{$suffix}";
+        foreach ($stages as $semantic => $s) {
+            $statusId = "DT{$entityTypeId}_{$categoryId}:{$s['status']}";
             $map[$semantic] = $statusId;
 
-            if (isset($have[$statusId])) {
+            if (empty($s['create']) || isset($have[$statusId])) {
                 continue;
             }
 
             if ($this->dryRun) {
-                $this->note("WOULD add stage '{$name}' ({$statusId})");
+                $this->note("WOULD add stage '{$s['name']}' ({$statusId})");
                 continue;
             }
 
             $this->client->call('crm.status.add', [
                 'fields' => [
                     'ENTITY_ID' => $statusEntityId,
-                    'STATUS_ID' => $statusId,
-                    'NAME'      => $name,
-                    'SORT'      => $sort,
+                    'STATUS_ID' => $s['status'], // bare id; Bitrix returns it DT-prefixed
+                    'NAME'      => $s['name'],
+                    'SORT'      => $s['sort'] ?? 100,
                 ],
             ]);
-            $this->note("added stage '{$name}' ({$statusId})");
-            $sort += 10;
+            $this->note("added stage '{$s['name']}' ({$statusId})");
         }
 
         return $map;

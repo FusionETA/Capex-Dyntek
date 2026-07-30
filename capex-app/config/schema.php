@@ -3,50 +3,49 @@
 declare(strict_types=1);
 
 /**
- * Declarative desired-state for the three SPAs. The provisioner reads this,
- * creates anything missing in the portal, then discovers the real REST field
- * codes and writes config/generated.php. Editing a title/type/option here and
- * re-running provision is the supported way to evolve the schema.
+ * Declarative desired-state for the three SPAs. Two consumers share it:
+ *  - public/install.php injects it (as JSON) into the browser provisioning page,
+ *    which CREATES types/fields/stages via BX24.callMethod in the admin's session
+ *    (the only context Bitrix lets you create SPA user fields from — see README).
+ *  - bin/provision.php --discover reads the portal back and maps schema key ->
+ *    real REST field code by title, writing config/generated.<env>.php.
  *
- * Field-type notes (deliberate, see Provisioner + build plan §3):
- *  - Join keys and app-written fields are `string`, NOT `enumeration`. Bitrix
- *    stores enum values as opaque per-field ids, so an enum "MY" on a Request
- *    and an enum "MY" on an Envelope have DIFFERENT ids and can't be matched,
- *    and writing the literal "WITHIN" to an enum field wouldn't stick. Region
- *    (the envelope join key) and every app-written field are therefore strings.
- *  - Purely user-selected display fields (category, currency) stay enumeration
- *    so the UI gets a dropdown; logic never branches on them.
+ * Field types: all string/money/integer/double/text — no enumeration in this pass.
+ * Enum values are opaque per-field ids (can't be matched across entities or set to
+ * literals), and string keeps the join/logic fields simple. Dropdowns for
+ * category/currency/cost_centre can be layered on later without touching logic.
  */
 
 return [
     'request' => [
         'title'  => 'Capex Request',
+        // semantic key => stage. NEW/PREPARATION/CLIENT/SUCCESS/FAIL are Bitrix
+        // defaults (create=false, listed for the id mapping only). UC_* are ours.
+        // STATUS_ID must be <= 18 chars.
         'stages' => [
-            // semantic key => [STATUS_ID suffix, display name]. NEW/PREPARATION/
-            // CLIENT/SUCCESS/FAIL are Bitrix defaults; UC_* are added by us.
-            'draft'          => ['NEW',         'Draft'],
-            'submitted'      => ['PREPARATION', 'Submitted'],
-            'hod_review'     => ['CLIENT',      'HOD review'],
-            'finance_review' => ['UC_FIN',      'Finance review'],
-            'approved'       => ['SUCCESS',     'Approved'],
-            'closed'         => ['UC_CLOSED',   'Closed'],
-            'rejected'       => ['FAIL',        'Rejected'],
+            'draft'          => ['status' => 'NEW',         'name' => 'Draft',          'create' => false],
+            'submitted'      => ['status' => 'PREPARATION', 'name' => 'Submitted',      'create' => false],
+            'hod_review'     => ['status' => 'CLIENT',      'name' => 'HOD review',     'create' => false],
+            'finance_review' => ['status' => 'UC_FIN',      'name' => 'Finance review', 'sort' => 35, 'create' => true],
+            'approved'       => ['status' => 'SUCCESS',     'name' => 'Approved',       'create' => false],
+            'closed'         => ['status' => 'UC_CLOSED',   'name' => 'Closed',         'sort' => 45, 'create' => true],
+            'rejected'       => ['status' => 'FAIL',        'name' => 'Rejected',       'create' => false],
         ],
         'fields' => [
-            'req_code'          => ['title' => 'Request code',        'type' => 'string'],
-            'region'            => ['title' => 'Region',              'type' => 'string'], // join key
-            'cost_centre'       => ['title' => 'Cost centre',         'type' => 'enumeration', 'items' => ['IT', 'Plant', 'Building', 'Vehicle', 'Other']],
-            'category'          => ['title' => 'Category',            'type' => 'enumeration', 'items' => ['IT', 'Plant & machinery', 'Building', 'Vehicle', 'Other']],
-            'amount_local'      => ['title' => 'Amount (local)',      'type' => 'money'],
-            'currency'          => ['title' => 'Currency',            'type' => 'enumeration', 'items' => ['SGD', 'HKD', 'MYR', 'IDR']],
-            'amount_sgd'        => ['title' => 'Amount (SGD)',        'type' => 'money'],    // app-written
-            'justification'     => ['title' => 'Justification',       'type' => 'text'],
-            'payback_months'    => ['title' => 'Payback (months)',    'type' => 'integer'],
-            'envelope_id'       => ['title' => 'Envelope id',         'type' => 'integer'],  // app-written
-            'budget_verdict'    => ['title' => 'Budget verdict',      'type' => 'string'],   // app-written WITHIN/OVER
-            'over_by_sgd'       => ['title' => 'Over by (SGD)',       'type' => 'money'],    // app-written
-            'reallocation_note' => ['title' => 'Reallocation note',   'type' => 'text'],
-            'gl_code'           => ['title' => 'GL code',             'type' => 'string'],
+            'req_code'          => ['title' => 'Request code',      'type' => 'string'],
+            'region'            => ['title' => 'Region',            'type' => 'string'], // join key
+            'cost_centre'       => ['title' => 'Cost centre',       'type' => 'string'],
+            'category'          => ['title' => 'Category',          'type' => 'string'],
+            'amount_local'      => ['title' => 'Amount (local)',    'type' => 'money'],
+            'currency'          => ['title' => 'Currency',          'type' => 'string'],
+            'amount_sgd'        => ['title' => 'Amount (SGD)',      'type' => 'money'],   // app-written
+            'justification'     => ['title' => 'Justification',     'type' => 'text'],
+            'payback_months'    => ['title' => 'Payback (months)',  'type' => 'integer'],
+            'envelope_id'       => ['title' => 'Envelope id',       'type' => 'integer'], // app-written
+            'budget_verdict'    => ['title' => 'Budget verdict',    'type' => 'string'],  // app-written
+            'over_by_sgd'       => ['title' => 'Over by (SGD)',     'type' => 'money'],   // app-written
+            'reallocation_note' => ['title' => 'Reallocation note', 'type' => 'text'],
+            'gl_code'           => ['title' => 'GL code',           'type' => 'string'],
         ],
     ],
 
@@ -54,13 +53,13 @@ return [
         'title'  => 'Budget Envelope',
         'stages' => [],
         'fields' => [
-            'region'         => ['title' => 'Region',            'type' => 'string'], // join key
-            'fy'             => ['title' => 'Fiscal year',       'type' => 'integer'],
-            'approved_sgd'   => ['title' => 'Approved (SGD)',    'type' => 'money'],
-            'committed_sgd'  => ['title' => 'Committed (SGD)',   'type' => 'money'],  // app-written
-            'spent_sgd'      => ['title' => 'Spent (SGD)',       'type' => 'money'],  // app-written
-            'fx_rate_to_sgd' => ['title' => 'FX rate to SGD',    'type' => 'double'],
-            'status'         => ['title' => 'Status',            'type' => 'string'], // draft/locked
+            'region'         => ['title' => 'Region',         'type' => 'string'], // join key
+            'fy'             => ['title' => 'Fiscal year',    'type' => 'integer'],
+            'approved_sgd'   => ['title' => 'Approved (SGD)', 'type' => 'money'],
+            'committed_sgd'  => ['title' => 'Committed (SGD)','type' => 'money'],  // app-written
+            'spent_sgd'      => ['title' => 'Spent (SGD)',    'type' => 'money'],  // app-written
+            'fx_rate_to_sgd' => ['title' => 'FX rate to SGD', 'type' => 'double'],
+            'status'         => ['title' => 'Status',         'type' => 'string'], // draft/locked
         ],
     ],
 
@@ -68,10 +67,10 @@ return [
         'title'  => 'Sales Target',
         'stages' => [],
         'fields' => [
-            'region'     => ['title' => 'Region',        'type' => 'string'],
-            'period'     => ['title' => 'Period',        'type' => 'string'],
-            'target_sgd' => ['title' => 'Target (SGD)',  'type' => 'money'],
-            'actual_sgd' => ['title' => 'Actual (SGD)',  'type' => 'money'],
+            'region'     => ['title' => 'Region',       'type' => 'string'],
+            'period'     => ['title' => 'Period',       'type' => 'string'],
+            'target_sgd' => ['title' => 'Target (SGD)', 'type' => 'money'],
+            'actual_sgd' => ['title' => 'Actual (SGD)', 'type' => 'money'],
         ],
     ],
 ];

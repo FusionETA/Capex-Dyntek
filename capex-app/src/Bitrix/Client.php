@@ -72,11 +72,8 @@ final class Client implements ClientInterface
 
         $raw = curl_exec($ch);
         if ($raw === false) {
-            $err = curl_error($ch);
-            curl_close($ch);
-            throw new \RuntimeException("cURL error: {$err}");
+            throw new \RuntimeException('cURL error: ' . curl_error($ch));
         }
-        curl_close($ch);
 
         /** @var array<string,mixed> $decoded */
         $decoded = json_decode((string) $raw, true) ?? [];

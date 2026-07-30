@@ -3,16 +3,18 @@
 declare(strict_types=1);
 
 /**
- * One-shot provisioning CLI. Creates/updates the three SPAs, their stages and
- * fields, then writes the discovered codes to config/generated.php (merged over
- * config/app.php at boot).
+ * Provisioning CLI. On Bitrix24 cloud, creating SPA user fields must happen in an
+ * admin browser session (see README) — that's done by the browser install page.
+ * This CLI's primary job is --discover: read the portal back after the browser
+ * install and write config/generated.<env>.php (merged over app.php at boot).
  *
- * Prerequisites: the app must already be installed (OAuth tokens in var/tokens.sqlite)
- * so REST calls can authenticate. Run it ONCE after install, before using the app.
+ * Prerequisites: the app must be installed (OAuth tokens in var/tokens.<env>.sqlite).
  *
  * Usage:
- *   php capex-app/bin/provision.php --dry-run   # report only, changes nothing
- *   php capex-app/bin/provision.php             # apply, then write generated.php
+ *   php capex-app/bin/provision.php --discover   # read-only: map codes, write generated.php
+ *   php capex-app/bin/provision.php --dry-run    # report the create plan (no changes)
+ *   php capex-app/bin/provision.php              # attempt server-side create (blocked on
+ *                                                #   cloud; use the browser install instead)
  */
 
 require __DIR__ . '/../src/Autoload.php';
@@ -20,14 +22,15 @@ require __DIR__ . '/../src/Autoload.php';
 use Capex\App;
 use Capex\Provision\Provisioner;
 
-$dryRun = in_array('--dry-run', $argv, true);
+$dryRun   = in_array('--dry-run', $argv, true);
+$discover = in_array('--discover', $argv, true);
 
 $app = App::boot();
 $schema = require __DIR__ . '/../config/schema.php';
 
 fwrite(STDOUT, sprintf(
     "%s [env: %s, portal: %s]\n",
-    $dryRun ? '== DRY RUN (no changes) ==' : '== Provisioning ==',
+    $discover ? '== DISCOVER (read-only) ==' : ($dryRun ? '== DRY RUN (no changes) ==' : '== Provisioning =='),
     $app->env,
     $app->config['oauth']['portal_domain'] ?? '?',
 ));
@@ -35,7 +38,7 @@ fwrite(STDOUT, sprintf(
 $provisioner = new Provisioner($app->client, $schema, $dryRun);
 
 try {
-    $generated = $provisioner->apply();
+    $generated = $discover ? $provisioner->discover() : $provisioner->apply();
 } catch (\Throwable $e) {
     fwrite(STDERR, "\nFAILED: {$e->getMessage()}\n");
     foreach ($provisioner->log as $line) {

@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Exercises the provisioning orchestration against a fake Bitrix client:
- *   - missing types are created; existing types (matched by title) are reused
- *   - missing fields are added; existing fields are skipped (idempotent)
- *   - REST field codes are DISCOVERED by title, not guessed
- *   - a second apply() adds nothing
+ * Tests Provisioner::discover() — the read-only server path that runs AFTER the
+ * browser (BX24) has created the SPAs. Against a fake portal simulating that
+ * post-install state, it asserts:
+ *   - each schema entity resolves to its entityTypeId (found by title)
+ *   - every schema field key maps to the REST code Bitrix assigned (by title, not guessed)
+ *   - semantic stages map to full DT{entityTypeId}_{categoryId}:{STATUS} ids
  *
  * Run: php capex-app/tests/ProvisionerTest.php
  */
@@ -36,65 +37,51 @@ function check(string $label, $expected, $actual): void
 }
 
 /**
- * Fake portal. Types are created on demand and remember their fields; crm.item.fields
- * returns them keyed by a Bitrix-style code that is intentionally NOT the schema key,
- * so the test proves discovery-by-title works.
+ * Fake portal already provisioned by the browser: three types exist, each with its
+ * schema fields registered under Bitrix-style codes that are deliberately NOT the
+ * schema keys — so the test proves discovery works by title.
  */
-final class FakePortal implements ClientInterface
+final class ProvisionedPortal implements ClientInterface
 {
     /** @var array<string,int> title => entityTypeId */
-    public array $types = [];
-    private int $nextTypeId = 180;
+    private array $typeIds = ['Capex Request' => 1292, 'Budget Envelope' => 1293, 'Sales Target' => 1294];
 
     /** @var array<int,array<string,string>> entityTypeId => [restCode => title] */
-    public array $fields = [];
+    private array $fields = [];
 
-    /** @var array<string,int> method => call count */
-    public array $calls = [];
+    /** @param array<string,mixed> $schema */
+    public function __construct(array $schema)
+    {
+        $map = ['request' => 1292, 'envelope' => 1293, 'target' => 1294];
+        foreach ($schema as $key => $spec) {
+            $etid = $map[$key];
+            $this->fields[$etid] = [];
+            foreach ($spec['fields'] as $f) {
+                $code = 'ufCrm_' . $etid . '_' . substr(md5($f['title']), 0, 6);
+                $this->fields[$etid][$code] = $f['title'];
+            }
+        }
+    }
 
     public function call(string $method, array $params = []): array
     {
-        $this->calls[$method] = ($this->calls[$method] ?? 0) + 1;
-
         switch ($method) {
             case 'crm.type.list':
                 $title = (string) ($params['filter']['title'] ?? '');
-                if (isset($this->types[$title])) {
-                    return ['result' => ['types' => [['entityTypeId' => $this->types[$title], 'title' => $title]]]];
-                }
-                return ['result' => ['types' => []]];
-
-            case 'crm.type.add':
-                $title = (string) $params['fields']['title'];
-                $id = $this->nextTypeId++;
-                $this->types[$title] = $id;
-                $this->fields[$id] = [];
-                return ['result' => ['type' => ['entityTypeId' => $id, 'title' => $title]]];
-
-            case 'userfieldconfig.add':
-                $entityTypeId = (int) str_replace('CRM_', '', (string) $params['field']['ENTITY_ID']);
-                $title = (string) $params['field']['EDIT_FORM_LABEL'];
-                // Bitrix assigns a code we can't predict from the key — fake that.
-                $restCode = 'ufCrm_' . $entityTypeId . '_' . substr(md5($title), 0, 6);
-                $this->fields[$entityTypeId][$restCode] = $title;
-                return ['result' => 1];
+                return isset($this->typeIds[$title])
+                    ? ['result' => ['types' => [['entityTypeId' => $this->typeIds[$title], 'id' => 5, 'title' => $title]]]]
+                    : ['result' => ['types' => []]];
 
             case 'crm.item.fields':
-                $entityTypeId = (int) $params['entityTypeId'];
+                $etid = (int) $params['entityTypeId'];
                 $out = [];
-                foreach ($this->fields[$entityTypeId] ?? [] as $code => $title) {
+                foreach ($this->fields[$etid] ?? [] as $code => $title) {
                     $out[$code] = ['title' => $title];
                 }
                 return ['result' => ['fields' => $out]];
 
             case 'crm.category.list':
-                return ['result' => ['categories' => [['id' => 1]]]];
-
-            case 'crm.status.list':
-                return ['result' => []];
-
-            case 'crm.status.add':
-                return ['result' => 1];
+                return ['result' => ['categories' => [['id' => 230]]]];
         }
 
         return ['result' => []];
@@ -107,37 +94,26 @@ final class FakePortal implements ClientInterface
 }
 
 $schema = require __DIR__ . '/../config/schema.php';
-$portal = new FakePortal();
+$portal = new ProvisionedPortal($schema);
 
-// --- first apply(): creates everything ---
-$gen = (new Provisioner($portal, $schema))->apply();
+$gen = (new Provisioner($portal, $schema))->discover();
 
-check('created 3 types', 3, $portal->calls['crm.type.add'] ?? 0);
-check('request entity id captured', 180, $gen['entities']['request']);
-check('envelope entity id captured', 181, $gen['entities']['envelope']);
-check('target entity id captured', 182, $gen['entities']['target']);
+// entities
+check('request entity id', 1292, $gen['entities']['request']);
+check('envelope entity id', 1293, $gen['entities']['envelope']);
+check('target entity id', 1294, $gen['entities']['target']);
 
-// discovery: schema key -> a real, non-guessed code that maps back to the right title
+// field discovery by title
 $regionCode = $gen['fields']['request']['region'];
 check('region code discovered (not the schema key)', true, $regionCode !== 'region' && $regionCode !== '');
-check('discovered code resolves to the right field',
-    'Region', $portal->fields[180][$regionCode] ?? null);
+check('every request field resolved', 0,
+    count(array_filter($gen['fields']['request'], static fn ($c) => $c === '')));
+check('envelope committed field resolved', true, ($gen['fields']['envelope']['committed_sgd'] ?? '') !== '');
 
-// stages: semantic key -> full stageId with our type + category
-check('finance_review stage id', 'DT180_1:UC_FIN', $gen['stages']['finance_review']);
-check('approved stage id', 'DT180_1:SUCCESS', $gen['stages']['approved']);
-
-// every request field resolved to a non-empty code
-$unresolved = array_filter($gen['fields']['request'], static fn ($c) => $c === '');
-check('all request fields resolved', 0, count($unresolved));
-
-// --- second apply(): idempotent, adds nothing ---
-$addsBefore = $portal->calls['userfieldconfig.add'] ?? 0;
-$typesBefore = $portal->calls['crm.type.add'] ?? 0;
-(new Provisioner($portal, $schema))->apply();
-
-check('no new types on re-run', $typesBefore, $portal->calls['crm.type.add'] ?? 0);
-check('no new fields on re-run', $addsBefore, $portal->calls['userfieldconfig.add'] ?? 0);
+// stages -> full DT ids on the request category (230)
+check('finance_review stage id', 'DT1292_230:UC_FIN', $gen['stages']['finance_review']);
+check('approved stage id', 'DT1292_230:SUCCESS', $gen['stages']['approved']);
+check('closed stage id', 'DT1292_230:UC_CLOSED', $gen['stages']['closed']);
 
 echo "\n{$tests} checks, {$failures} failure(s)\n";
 exit($failures === 0 ? 0 : 1);

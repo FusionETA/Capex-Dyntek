@@ -36,3 +36,11 @@ h1 { font-size: 1.4rem; margin: 0 0 4px; }
 
 .verdict-over { color: var(--over); font-weight: 600; }
 .verdict-within { color: var(--within); font-weight: 600; }
+
+/* Install / provisioning progress */
+.capex-install { padding: 24px; max-width: 720px; margin: 0 auto; }
+.capex-log { list-style: none; padding: 0; margin: 16px 0; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.capex-log li { padding: 2px 0; color: var(--muted); }
+.capex-log li.ok { color: var(--within); }
+.capex-log li.warn { color: #b7791f; }
+.capex-log li.err { color: var(--over); }
