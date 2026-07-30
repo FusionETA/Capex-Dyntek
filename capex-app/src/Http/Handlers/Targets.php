@@ -28,7 +28,7 @@ final class Targets
 
         try {
             $data = (new ScreenData($this->app))->targets();
-            capex_render('targets', 'Capex Targets', 'targets', $data);
+            capex_render('targets', 'Capex Targets', 'targets', $data, (string) ($_REQUEST['member_id'] ?? ''));
         } catch (\Throwable $e) {
             capex_error($e);
         }

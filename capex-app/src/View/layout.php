@@ -8,6 +8,8 @@ declare(strict_types=1);
 // Absolute base — relative asset/link paths break when Bitrix24 embeds the app.
 $__base = capex_base();
 $__idx  = $__base . '/index.php';
+// Carry member_id through nav so tab switches stay authenticated (see capex_render).
+$__mq = ($__member ?? '') !== '' ? '&amp;member_id=' . rawurlencode($__member) : '';
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -23,9 +25,9 @@ $__idx  = $__base . '/index.php';
 <body>
     <nav class="capex-nav">
         <span class="capex-brand">Capex</span>
-        <a href="<?= e($__idx) ?>?screen=dashboard" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
-        <a href="<?= e($__idx) ?>?screen=budget" class="<?= $__active === 'budget' ? 'active' : '' ?>">Budget</a>
-        <a href="<?= e($__idx) ?>?screen=targets" class="<?= $__active === 'targets' ? 'active' : '' ?>">Targets</a>
+        <a href="<?= e($__idx) ?>?screen=dashboard<?= $__mq ?>" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
+        <a href="<?= e($__idx) ?>?screen=budget<?= $__mq ?>" class="<?= $__active === 'budget' ? 'active' : '' ?>">Budget</a>
+        <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Targets</a>
     </nav>
     <main class="capex-screen">
         <?php extract($data); include $__view; ?>

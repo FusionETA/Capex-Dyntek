@@ -28,7 +28,7 @@ final class Budget
 
         try {
             $data = (new ScreenData($this->app))->budget();
-            capex_render('budget', 'Capex Budget', 'budget', $data);
+            capex_render('budget', 'Capex Budget', 'budget', $data, (string) ($_REQUEST['member_id'] ?? ''));
         } catch (\Throwable $e) {
             capex_error($e);
         }
