@@ -1,0 +1,9 @@
+# capex-test/ deploy root — target portal (set test or prod).
+# Applies to public/ below it. For the prod deploy this line becomes `SetEnv APP_ENV prod`.
+SetEnv APP_ENV prod
+
+# No directory listings anywhere in the tree.
+Options -Indexes
+
+# Secrets/code are guarded by per-directory deny .htaccess in config/ src/ var/ bin/ tests/.
+# public/ stays reachable — that's the app's only entry point.

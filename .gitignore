@@ -1,6 +1,7 @@
 # Runtime state — never commit secrets, tokens, or logs
 capex-app/var/*
 !capex-app/var/.gitkeep
+!capex-app/var/.htaccess
 
 # Local config carries client secret (per-env: app.test.php, app.prod.php, …)
 capex-app/config/app.php
@@ -10,6 +11,9 @@ capex-app/config/app.*.php
 # Provisioning output — portal-specific entity ids + discovered field codes
 capex-app/config/generated.php
 capex-app/config/generated.*.php
+
+# Deploy-root .htaccess carries the env-specific SetEnv APP_ENV line
+capex-app/.htaccess
 
 # Dependencies (if an HTTP client is ever vendored via Composer)
 /vendor/
