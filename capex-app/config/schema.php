@@ -22,13 +22,17 @@ return [
         // semantic key => stage. NEW/PREPARATION/CLIENT/SUCCESS/FAIL are Bitrix
         // defaults (create=false, listed for the id mapping only). UC_* are ours.
         // STATUS_ID must be <= 18 chars.
+        // Bitrix won't allow a stage after the terminal SUCCESS stage, so "Approved"
+        // is a custom mid-pipeline stage and "Closed" maps to SUCCESS (terminal).
+        // committed = Σ Approved-stage; spent = Σ Closed(=SUCCESS)-stage. Defaults
+        // (create=false) are renamed in place to match the plan's labels.
         'stages' => [
             'draft'          => ['status' => 'NEW',         'name' => 'Draft',          'create' => false],
             'submitted'      => ['status' => 'PREPARATION', 'name' => 'Submitted',      'create' => false],
             'hod_review'     => ['status' => 'CLIENT',      'name' => 'HOD review',     'create' => false],
-            'finance_review' => ['status' => 'UC_FIN',      'name' => 'Finance review', 'sort' => 35, 'create' => true],
-            'approved'       => ['status' => 'SUCCESS',     'name' => 'Approved',       'create' => false],
-            'closed'         => ['status' => 'UC_CLOSED',   'name' => 'Closed',         'sort' => 45, 'create' => true],
+            'finance_review' => ['status' => 'UC_FIN',      'name' => 'Finance review', 'sort' => 32, 'create' => true],
+            'approved'       => ['status' => 'UC_APPROVED', 'name' => 'Approved',       'sort' => 35, 'create' => true],
+            'closed'         => ['status' => 'SUCCESS',     'name' => 'Closed',         'create' => false],
             'rejected'       => ['status' => 'FAIL',        'name' => 'Rejected',       'create' => false],
         ],
         'fields' => [
