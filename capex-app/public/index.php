@@ -35,11 +35,9 @@ $router->add('/dashboard', static fn () => (new Dashboard())->handle());
 $router->add('/webhook', static fn () => (new Webhook($app))->handle());
 $router->add('/diag', static fn () => (new Diag($app))->handle());
 
-// Support both PATH_INFO (…/index.php/webhook) and a plain path.
-$path = $_SERVER['PATH_INFO'] ?? parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$path = '/' . ltrim((string) $path, '/');
-if (str_ends_with($path, '/index.php')) {
-    $path = '/';
-}
+// Route on PATH_INFO only (the part after index.php, e.g. /webhook). This is
+// independent of the deploy sub-path — REQUEST_URI would carry the /web/capex-test
+// prefix and break matching. No extra path (bare index.php or the directory) => '/'.
+$path = '/' . ltrim((string) ($_SERVER['PATH_INFO'] ?? ''), '/');
 
 $router->dispatch($path);
