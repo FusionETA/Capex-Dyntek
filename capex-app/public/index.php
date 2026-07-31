@@ -21,15 +21,11 @@ use Capex\Http\Handlers\Targets;
 
 $app = App::boot();
 
-// If Bitrix re-posts an auth bundle on app-open, keep the token store fresh.
-if (!empty($_REQUEST['AUTH_ID']) && !empty($_REQUEST['REFRESH_ID']) && !empty($_REQUEST['member_id'])) {
-    $app->auth->store(
-        (string) $_REQUEST['AUTH_ID'],
-        (string) $_REQUEST['REFRESH_ID'],
-        time() + (int) ($_REQUEST['AUTH_EXPIRES'] ?? 3600),
-        (string) $_REQUEST['member_id'],
-    );
-}
+// NOTE: we deliberately do NOT store the opening user's AUTH_ID here. Data is read
+// with the installer's (admin) service token so every viewer sees the same records;
+// the opening user's AUTH_ID is used only to identify them + their role (App::
+// resolveUser), never to replace the service token. Storing it would clobber the
+// service token with a limited user's permissions and blank the screens.
 
 // System endpoint (health check) by PATH_INFO, independent of deploy sub-path.
 $path = '/' . ltrim((string) ($_SERVER['PATH_INFO'] ?? ''), '/');
