@@ -50,6 +50,10 @@ return [
             'over_by_sgd'       => ['title' => 'Over by (SGD)',     'type' => 'money'],   // app-written
             'reallocation_note' => ['title' => 'Reallocation note', 'type' => 'text'],
             'gl_code'           => ['title' => 'GL code',           'type' => 'string'],
+            'pic'               => ['title' => 'PIC',               'type' => 'string'],
+            'timeline'          => ['title' => 'Timeline',          'type' => 'string'],
+            'date_request'      => ['title' => 'Date of request',   'type' => 'date'],
+            'date_approval'     => ['title' => 'Date of approval',  'type' => 'date'],
         ],
     ],
 
