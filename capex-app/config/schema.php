@@ -43,10 +43,12 @@ return [
         'title'  => 'Sales Target',
         'stages' => [],
         'fields' => [
-            'region'     => ['title' => 'Region',      'type' => 'string'],
-            'period'     => ['title' => 'Period',      'type' => 'string'],
-            'target_sgd' => ['title' => 'New target',  'type' => 'money'],  // entered by Finance
-            'actual_sgd' => ['title' => 'Current met', 'type' => 'money'],  // entered by Finance
+            // Titles must match the existing Bitrix field titles for discovery.
+            // UI labels ("New target" / "Current met") live in the views, not here.
+            'region'     => ['title' => 'Region',       'type' => 'string'],
+            'period'     => ['title' => 'Period',       'type' => 'string'],
+            'target_sgd' => ['title' => 'Target (SGD)', 'type' => 'money'],  // shown as "New target"
+            'actual_sgd' => ['title' => 'Actual (SGD)', 'type' => 'money'],  // shown as "Current met"
         ],
     ],
 ];
