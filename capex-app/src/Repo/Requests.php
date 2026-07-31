@@ -34,32 +34,6 @@ final class Requests
         return $res['result']['items'] ?? [];
     }
 
-    /**
-     * amountSGD (integer cents) of every request in $stageId linked to $envelopeId.
-     * The envelope filter is what enforces the LAPSE policy — only this envelope's
-     * (and therefore this FY's) requests are summed.
-     *
-     * @return array<int,int>
-     */
-    public function amountsSgdInStageForEnvelope(string $stageId, int $envelopeId): array
-    {
-        $res = $this->client->call('crm.item.list', [
-            'entityTypeId' => $this->entityTypeId,
-            'filter'       => [
-                'stageId'                     => $stageId,
-                $this->fields['envelope_id'] => $envelopeId,
-            ],
-            'select' => ['id', $this->fields['amount_sgd']],
-        ]);
-
-        $items = $res['result']['items'] ?? [];
-
-        return array_map(
-            fn (array $it): int => Money::fieldToCents($it[$this->fields['amount_sgd']] ?? null),
-            $items,
-        );
-    }
-
     /** @return array<string,mixed> */
     public function get(int $id): array
     {

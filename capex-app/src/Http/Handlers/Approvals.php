@@ -36,7 +36,7 @@ final class Approvals
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $id = (int) ($_POST['id'] ?? 0);
                 $action = (string) ($_POST['action'] ?? '');
-                $flash = $service->act($user['role'], $id, $action);
+                $flash = $service->act($user['role'], $id, $action, date('Y-m-d'));
             }
 
             capex_render('approvals', 'Capex Approvals', 'approvals', [

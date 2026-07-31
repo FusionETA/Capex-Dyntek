@@ -14,12 +14,10 @@ require __DIR__ . '/../src/Autoload.php';
 
 use Capex\App;
 use Capex\Http\Handlers\Approvals;
-use Capex\Http\Handlers\Budget;
 use Capex\Http\Handlers\Dashboard;
 use Capex\Http\Handlers\Diag;
 use Capex\Http\Handlers\NewRequest;
 use Capex\Http\Handlers\Targets;
-use Capex\Http\Handlers\Webhook;
 
 $app = App::boot();
 
@@ -33,13 +31,8 @@ if (!empty($_REQUEST['AUTH_ID']) && !empty($_REQUEST['REFRESH_ID']) && !empty($_
     );
 }
 
-// System endpoints by PATH_INFO (independent of deploy sub-path).
+// System endpoint (health check) by PATH_INFO, independent of deploy sub-path.
 $path = '/' . ltrim((string) ($_SERVER['PATH_INFO'] ?? ''), '/');
-
-if ($path === '/webhook') {
-    (new Webhook($app))->handle();
-    return;
-}
 if ($path === '/diag') {
     (new Diag($app))->handle();
     return;
@@ -48,7 +41,6 @@ if ($path === '/diag') {
 // User-facing screens.
 $screen = (string) ($_REQUEST['screen'] ?? 'dashboard');
 match ($screen) {
-    'budget'    => (new Budget($app))->handle(),
     'targets'   => (new Targets($app))->handle(),
     'approvals' => (new Approvals($app))->handle(),
     'new'       => (new NewRequest($app))->handle(),

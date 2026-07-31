@@ -27,9 +27,8 @@ $__mq .= ($__utok ?? '') !== '' ? '&amp;utok=' . rawurlencode($__utok) : '';
     <nav class="capex-nav">
         <span class="capex-brand">Capex</span>
         <a href="<?= e($__idx) ?>?screen=dashboard<?= $__mq ?>" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
-        <a href="<?= e($__idx) ?>?screen=budget<?= $__mq ?>" class="<?= $__active === 'budget' ? 'active' : '' ?>">Budget</a>
-        <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Targets</a>
         <a href="<?= e($__idx) ?>?screen=approvals<?= $__mq ?>" class="<?= $__active === 'approvals' ? 'active' : '' ?>">Approvals</a>
+        <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Sales Targets</a>
         <a href="<?= e($__idx) ?>?screen=new<?= $__mq ?>" class="nav-cta <?= $__active === 'new' ? 'active' : '' ?>">+ New request</a>
     </nav>
     <main class="capex-screen">

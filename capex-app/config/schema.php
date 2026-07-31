@@ -3,71 +3,39 @@
 declare(strict_types=1);
 
 /**
- * Declarative desired-state for the three SPAs. Two consumers share it:
+ * Declarative desired-state for the SPAs. Two consumers share it:
  *  - public/install.php injects it (as JSON) into the browser provisioning page,
- *    which CREATES types/fields/stages via BX24.callMethod in the admin's session
- *    (the only context Bitrix lets you create SPA user fields from — see README).
+ *    which CREATES types/fields/stages via BX24.callMethod in the admin's session.
  *  - bin/provision.php --discover reads the portal back and maps schema key ->
  *    real REST field code by title, writing config/generated.<env>.php.
  *
- * Field types: all string/money/integer/double/text — no enumeration in this pass.
- * Enum values are opaque per-field ids (can't be matched across entities or set to
- * literals), and string keeps the join/logic fields simple. Dropdowns for
- * category/currency/cost_centre can be layered on later without touching logic.
+ * Two record types: Capex Request and Sales Target. There is no budget tracking.
  */
 
 return [
     'request' => [
         'title'  => 'Capex Request',
-        // semantic key => stage. NEW/PREPARATION/CLIENT/SUCCESS/FAIL are Bitrix
-        // defaults (create=false, listed for the id mapping only). UC_* are ours.
-        // STATUS_ID must be <= 18 chars.
-        // Bitrix won't allow a stage after the terminal SUCCESS stage, so "Approved"
-        // is a custom mid-pipeline stage and "Closed" maps to SUCCESS (terminal).
-        // committed = Σ Approved-stage; spent = Σ Closed(=SUCCESS)-stage. Defaults
-        // (create=false) are renamed in place to match the plan's labels.
+        // NEW/PREPARATION/CLIENT/SUCCESS/FAIL are Bitrix defaults; UC_APPROVED is ours.
         'stages' => [
-            'draft'          => ['status' => 'NEW',         'name' => 'Draft',          'create' => false],
-            'submitted'      => ['status' => 'PREPARATION', 'name' => 'Submitted',      'create' => false],
-            'hod_review'     => ['status' => 'CLIENT',      'name' => 'HOD review',     'create' => false],
-            'finance_review' => ['status' => 'UC_FIN',      'name' => 'Finance review', 'sort' => 32, 'create' => true],
-            'approved'       => ['status' => 'UC_APPROVED', 'name' => 'Approved',       'sort' => 35, 'create' => true],
-            'closed'         => ['status' => 'SUCCESS',     'name' => 'Closed',         'create' => false],
-            'rejected'       => ['status' => 'FAIL',        'name' => 'Rejected',       'create' => false],
+            'draft'     => ['status' => 'NEW',         'name' => 'Draft',     'create' => false],
+            'submitted' => ['status' => 'PREPARATION', 'name' => 'Submitted', 'create' => false],
+            'approved'  => ['status' => 'UC_APPROVED', 'name' => 'Approved',  'sort' => 35, 'create' => true],
+            'rejected'  => ['status' => 'FAIL',        'name' => 'Rejected',  'create' => false],
         ],
         'fields' => [
-            'req_code'          => ['title' => 'Request code',      'type' => 'string'],
-            'region'            => ['title' => 'Region',            'type' => 'string'], // join key
-            'cost_centre'       => ['title' => 'Cost centre',       'type' => 'string'],
-            'category'          => ['title' => 'Category',          'type' => 'string'],
-            'amount_local'      => ['title' => 'Amount (local)',    'type' => 'money'],
-            'currency'          => ['title' => 'Currency',          'type' => 'string'],
-            'amount_sgd'        => ['title' => 'Amount (SGD)',      'type' => 'money'],   // app-written
-            'justification'     => ['title' => 'Justification',     'type' => 'text'],
-            'payback_months'    => ['title' => 'Payback (months)',  'type' => 'integer'],
-            'envelope_id'       => ['title' => 'Envelope id',       'type' => 'integer'], // app-written
-            'budget_verdict'    => ['title' => 'Budget verdict',    'type' => 'string'],  // app-written
-            'over_by_sgd'       => ['title' => 'Over by (SGD)',     'type' => 'money'],   // app-written
-            'reallocation_note' => ['title' => 'Reallocation note', 'type' => 'text'],
-            'gl_code'           => ['title' => 'GL code',           'type' => 'string'],
-            'pic'               => ['title' => 'PIC',               'type' => 'string'],
-            'timeline'          => ['title' => 'Timeline',          'type' => 'string'],
-            'date_request'      => ['title' => 'Date of request',   'type' => 'date'],
-            'date_approval'     => ['title' => 'Date of approval',  'type' => 'date'],
-        ],
-    ],
-
-    'envelope' => [
-        'title'  => 'Budget Envelope',
-        'stages' => [],
-        'fields' => [
-            'region'         => ['title' => 'Region',         'type' => 'string'], // join key
-            'fy'             => ['title' => 'Fiscal year',    'type' => 'integer'],
-            'approved_sgd'   => ['title' => 'Approved (SGD)', 'type' => 'money'],
-            'committed_sgd'  => ['title' => 'Committed (SGD)','type' => 'money'],  // app-written
-            'spent_sgd'      => ['title' => 'Spent (SGD)',    'type' => 'money'],  // app-written
-            'fx_rate_to_sgd' => ['title' => 'FX rate to SGD', 'type' => 'double'],
-            'status'         => ['title' => 'Status',         'type' => 'string'], // draft/locked
+            'req_code'       => ['title' => 'Request code',     'type' => 'string'],
+            'region'         => ['title' => 'Region',           'type' => 'string'],
+            'cost_centre'    => ['title' => 'Cost centre',      'type' => 'string'],
+            'category'       => ['title' => 'Category',         'type' => 'string'],
+            'amount_local'   => ['title' => 'Amount (local)',   'type' => 'money'],
+            'currency'       => ['title' => 'Currency',         'type' => 'string'],
+            'amount_sgd'     => ['title' => 'Amount (SGD)',     'type' => 'money'],   // app-written
+            'justification'  => ['title' => 'Justification',    'type' => 'text'],
+            'payback_months' => ['title' => 'Payback (months)', 'type' => 'integer'],
+            'pic'            => ['title' => 'PIC',              'type' => 'string'],
+            'timeline'       => ['title' => 'Timeline',         'type' => 'string'],
+            'date_request'   => ['title' => 'Date of request',  'type' => 'date'],    // app-written
+            'date_approval'  => ['title' => 'Date of approval', 'type' => 'date'],    // app-written
         ],
     ],
 
@@ -75,10 +43,10 @@ return [
         'title'  => 'Sales Target',
         'stages' => [],
         'fields' => [
-            'region'     => ['title' => 'Region',       'type' => 'string'],
-            'period'     => ['title' => 'Period',       'type' => 'string'],
-            'target_sgd' => ['title' => 'Target (SGD)', 'type' => 'money'],
-            'actual_sgd' => ['title' => 'Actual (SGD)', 'type' => 'money'],
+            'region'     => ['title' => 'Region',      'type' => 'string'],
+            'period'     => ['title' => 'Period',      'type' => 'string'],
+            'target_sgd' => ['title' => 'New target',  'type' => 'money'],  // entered by Finance
+            'actual_sgd' => ['title' => 'Current met', 'type' => 'money'],  // entered by Finance
         ],
     ],
 ];

@@ -22,16 +22,28 @@ return [
         'portal_domain' => 'your-portal.bitrix24.com', // reject requests from any other member_id
     ],
 
-    // Fiscal year the app resolves envelopes against (region + FY is unique).
-    // Year-end policy is LAPSE — bump this at FY rollover; prior-FY commitments
-    // do not carry forward. See Service\Recalculator to switch to roll-forward.
+    // Fiscal year label used on new records.
     'current_fy' => 2026,
 
-    // Dynamic entity type ids (DT<id>). Read from the portal after creating the SPAs.
+    // FX to SGD by request currency. amountSGD = amountLocal × rate. No budget
+    // envelopes hold rates anymore, so conversion lives here.
+    'fx_rates' => [
+        'SGD' => 1.0,
+        'MYR' => 0.29,
+        'HKD' => 0.17,
+        'IDR' => 0.00009,
+    ],
+
+    // Corporate base target per region (SGD) — read-only reference on the targets
+    // screen; Finance edits New target + Current met (the Bitrix record).
+    'corp_targets' => [
+        'SG' => 0, 'HK' => 0, 'MY' => 0, 'ID' => 0,
+    ],
+
+    // Dynamic entity type ids (DT<id>). Filled by provisioning discovery.
     'entities' => [
-        'request'  => 0, // Capex Request  entityTypeId
-        'envelope' => 0, // Budget Envelope entityTypeId
-        'target'   => 0, // Sales Target    entityTypeId
+        'request' => 0, // Capex Request entityTypeId
+        'target'  => 0, // Sales Target  entityTypeId
     ],
 
     // Stage codes for Capex Request (single pipeline). Fill <id> with the request entityTypeId.

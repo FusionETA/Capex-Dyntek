@@ -139,22 +139,17 @@
         });
     }
 
-    // Bind the three screen placements + the update webhook.
+    // Bind the app's menu placements. No event binding — there is no budget recalc.
     function bindPlacementsAndEvents(requestEntityTypeId) {
         var idx = HANDLER + '/index.php';
         var placements = [
-            { PLACEMENT: 'CRM_DYNAMIC_' + requestEntityTypeId + '_LIST_MENU', HANDLER: idx + '?screen=dashboard', TITLE: 'Capex Dashboard' },
-            { PLACEMENT: 'LEFT_MENU', HANDLER: idx + '?screen=budget',  TITLE: 'Capex Budget' },
-            { PLACEMENT: 'LEFT_MENU', HANDLER: idx + '?screen=targets', TITLE: 'Capex Targets' }
+            { PLACEMENT: 'CRM_DYNAMIC_' + requestEntityTypeId + '_LIST_MENU', HANDLER: idx + '?screen=dashboard', TITLE: 'Capex' },
+            { PLACEMENT: 'LEFT_MENU', HANDLER: idx + '?screen=dashboard', TITLE: 'Capex' }
         ];
 
         var i = 0;
         function nextPlacement() {
-            if (i >= placements.length) {
-                return call('event.bind', { event: 'onCrmDynamicItemUpdate', handler: idx + '/webhook' })
-                    .then(function () { log('webhook bound', 'ok'); })
-                    .catch(function (e) { log('event.bind skipped: ' + e.message, 'warn'); });
-            }
+            if (i >= placements.length) { return Promise.resolve(); }
             var p = placements[i++];
             return call('placement.bind', p)
                 .then(function () { log('placement: ' + p.TITLE, 'ok'); })

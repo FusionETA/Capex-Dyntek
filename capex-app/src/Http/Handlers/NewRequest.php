@@ -6,7 +6,6 @@ namespace Capex\Http\Handlers;
 
 use Capex\App;
 use Capex\Domain\Money;
-use Capex\Service\RequestProcessor;
 
 /**
  * In-app Capex Request submission. GET renders the form; POST creates the record
@@ -79,6 +78,8 @@ final class NewRequest
             'currency'      => $in('currency'),
             'justification' => $in('justification'),
             'payback_months' => $in('payback_months'),
+            'pic'           => $in('pic'),
+            'timeline'      => $in('timeline'),
         ];
 
         $errors = [];
@@ -93,27 +94,34 @@ final class NewRequest
         }
 
         $f = $this->app->config['fields']['request'];
+        $localCents = Money::toCents($values['amount_local']);
+        $amountSgd = $this->app->toSgd($localCents, $values['currency']);
+
         $fields = [
-            'title'                 => $values['title'],
-            $f['region']            => $values['region'],
-            $f['cost_centre']       => $values['cost_centre'],
-            $f['category']          => $values['category'],
-            $f['amount_local']      => Money::format(Money::toCents($values['amount_local'])),
-            $f['currency']          => $values['currency'],
-            $f['justification']     => $values['justification'],
-            'stageId'               => $this->app->config['stages']['submitted'] ?? '',
+            'title'             => $values['title'],
+            $f['region']        => $values['region'],
+            $f['cost_centre']   => $values['cost_centre'],
+            $f['category']      => $values['category'],
+            $f['amount_local']  => Money::format($localCents),
+            $f['currency']      => $values['currency'],
+            $f['amount_sgd']    => Money::format($amountSgd),
+            $f['justification'] => $values['justification'],
+            $f['pic']           => $values['pic'] ?? '',
+            $f['timeline']      => $values['timeline'] ?? '',
+            $f['date_request']  => date('Y-m-d'),
+            'stageId'           => $this->app->config['stages']['submitted'] ?? '',
         ];
         if ($values['payback_months'] !== '' && is_numeric($values['payback_months'])) {
             $fields[$f['payback_months']] = (int) $values['payback_months'];
         }
 
         $id = $this->app->requests()->create($fields);
-        $result = (new RequestProcessor($this->app))->process($id);
 
         capex_render('request_created', 'Request submitted', 'new', [
-            'id'      => $id,
-            'title'   => $values['title'],
-            'result'  => $result,
+            'id'       => $id,
+            'title'    => $values['title'],
+            'amount'   => Money::format($amountSgd),
+            'approver' => \Capex\Domain\Authority::forAmount($amountSgd, $this->app->config['authority_bands'] ?? []),
         ], $memberId, $this->userToken);
     }
 }

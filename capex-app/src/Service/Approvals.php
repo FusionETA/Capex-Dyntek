@@ -5,21 +5,17 @@ declare(strict_types=1);
 namespace Capex\Service;
 
 use Capex\App;
-use Capex\Domain\BudgetEngine;
+use Capex\Domain\Authority;
 use Capex\Domain\Money;
 use Capex\Domain\Roles;
-use Capex\Domain\Verdict;
 
 /**
- * In-app approval flow. Two gates over the existing stages:
- *   Gate A (HOD): request at Submitted or HOD review → Approve moves to Finance
- *     review, Reject to Rejected. Any HOD-or-higher role may act.
- *   Gate B (authority band): request at Finance review → the band-required role
- *     (BudgetEngine::authorityFor) or higher approves to Approved; OVER-budget
- *     always needs Group CFO. Reject to Rejected.
+ * In-app approval. A submitted request is routed by its SGD amount to the
+ * required authority (Authority::forAmount); that role — or any higher one —
+ * approves it to Approved or rejects it. No budget is involved.
  *
- * Because the app moves stages with the admin service token, every action is
- * re-checked server-side against the caller's signed role (see act()).
+ * The app moves stages with the admin service token, so every action is
+ * re-checked server-side against the caller's signed role.
  */
 final class Approvals
 {
@@ -28,26 +24,21 @@ final class Approvals
     }
 
     /**
-     * Requests currently awaiting a decision the given role can make.
+     * Submitted requests this role is allowed to decide.
      * @return array<int,array<string,mixed>>
      */
     public function pending(string $role): array
     {
-        $requests = $this->app->requests();
-        $stages = $this->app->config['stages'];
-        $gateAStages = [$stages['submitted'] ?? '', $stages['hod_review'] ?? ''];
-        $gateBStage = $stages['finance_review'] ?? '';
+        $submitted = $this->app->config['stages']['submitted'] ?? '';
+        if ($submitted === '') {
+            return [];
+        }
 
         $rows = [];
-        foreach (array_merge($gateAStages, [$gateBStage]) as $stageId) {
-            if ($stageId === '') {
-                continue;
-            }
-            foreach ($requests->inStage($stageId) as $item) {
-                $meta = $this->classify($item, $stageId);
-                if ($meta['canAct'] ? Roles::meets($role, $meta['required']) : false) {
-                    $rows[] = $meta;
-                }
+        foreach ($this->app->requests()->inStage($submitted) as $item) {
+            $meta = $this->classify($item);
+            if (Roles::meets($role, $meta['required'])) {
+                $rows[] = $meta;
             }
         }
 
@@ -55,83 +46,62 @@ final class Approvals
     }
 
     /**
-     * Perform an approve/reject. Verifies the role may act at the item's gate, moves
-     * the stage, and re-derives the envelope. Returns [ok, message].
-     *
+     * Approve or reject. Verifies the caller's role can clear the request's band,
+     * moves the stage, and stamps the approval date. Returns [ok, message].
      * @return array{ok:bool,message:string}
      */
-    public function act(string $role, int $requestId, string $action): array
+    public function act(string $role, int $requestId, string $action, string $today): array
     {
         $requests = $this->app->requests();
         $stages = $this->app->config['stages'];
+        $f = $this->app->config['fields']['request'];
 
         $item = $requests->get($requestId);
         if ($item === []) {
             return ['ok' => false, 'message' => 'Request not found.'];
         }
-
-        $stageId = (string) ($item['stageId'] ?? '');
-        $meta = $this->classify($item, $stageId);
-
-        if (!$meta['canAct']) {
+        if ((string) ($item['stageId'] ?? '') !== ($stages['submitted'] ?? '')) {
             return ['ok' => false, 'message' => 'This request is not awaiting approval.'];
         }
+
+        $meta = $this->classify($item);
         if (!Roles::meets($role, $meta['required'])) {
             return ['ok' => false, 'message' => 'Your role cannot approve this request.'];
         }
 
-        if ($action === 'reject') {
-            $target = $stages['rejected'];
-        } elseif ($action === 'approve') {
-            $target = $meta['gate'] === 'A' ? $stages['finance_review'] : $stages['approved'];
-        } else {
-            return ['ok' => false, 'message' => 'Unknown action.'];
+        if ($action === 'approve') {
+            $requests->update($requestId, [
+                'stageId'            => $stages['approved'],
+                $f['date_approval']  => $today,
+            ]);
+            return ['ok' => true, 'message' => sprintf('Request #%d approved.', $requestId)];
         }
 
-        $requests->update($requestId, ['stageId' => $target]);
+        if ($action === 'reject') {
+            $requests->update($requestId, ['stageId' => $stages['rejected']]);
+            return ['ok' => true, 'message' => sprintf('Request #%d rejected.', $requestId)];
+        }
 
-        // Re-derive the envelope after the stage change (approve/reject shifts totals).
-        (new RequestProcessor($this->app))->process($requestId);
-
-        return ['ok' => true, 'message' => sprintf('Request #%d %s.', $requestId, $action === 'approve' ? 'approved' : 'rejected')];
+        return ['ok' => false, 'message' => 'Unknown action.'];
     }
 
     /**
-     * Work out an item's gate, the role required to approve it, and display fields.
+     * Display fields + the role required to approve, from the amount band.
      * @param array<string,mixed> $item
      * @return array<string,mixed>
      */
-    private function classify(array $item, string $stageId): array
+    private function classify(array $item): array
     {
-        $stages = $this->app->config['stages'];
         $f = $this->app->config['fields']['request'];
-
-        $gate = null;
-        if (in_array($stageId, [$stages['submitted'] ?? '', $stages['hod_review'] ?? ''], true)) {
-            $gate = 'A';
-        } elseif ($stageId === ($stages['finance_review'] ?? '')) {
-            $gate = 'B';
-        }
-
-        $amountSgd = Money::fieldToCents($item[$f['amount_sgd']] ?? null);
-        $verdictStatus = (string) ($item[$f['budget_verdict']] ?? Verdict::WITHIN);
-        $overBy = Money::fieldToCents($item[$f['over_by_sgd']] ?? null);
-        $verdict = new Verdict($verdictStatus === Verdict::OVER ? Verdict::OVER : Verdict::WITHIN, $overBy);
-
-        // Gate A only needs HOD; Gate B needs the amount-band authority (OVER → CFO).
-        $required = $gate === 'B'
-            ? BudgetEngine::authorityFor($amountSgd, $verdict, $this->app->config['authority_bands'] ?? [])
-            : Roles::HOD;
+        $amount = Money::fieldToCents($item[$f['amount_sgd']] ?? null);
 
         return [
             'id'       => (int) ($item['id'] ?? 0),
             'title'    => (string) ($item['title'] ?? 'Untitled'),
             'region'   => (string) ($item[$f['region']] ?? '—'),
-            'amount'   => Money::format($amountSgd),
-            'verdict'  => $verdict->status,
-            'gate'     => $gate,
-            'required' => $required,
-            'canAct'   => $gate !== null,
+            'pic'      => (string) ($item[$f['pic']] ?? ''),
+            'amount'   => Money::format($amount),
+            'required' => Authority::forAmount($amount, $this->app->config['authority_bands'] ?? []),
         ];
     }
 }

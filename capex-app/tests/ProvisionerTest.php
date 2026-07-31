@@ -44,7 +44,7 @@ function check(string $label, $expected, $actual): void
 final class ProvisionedPortal implements ClientInterface
 {
     /** @var array<string,int> title => entityTypeId */
-    private array $typeIds = ['Capex Request' => 1292, 'Budget Envelope' => 1293, 'Sales Target' => 1294];
+    private array $typeIds = ['Capex Request' => 1292, 'Sales Target' => 1294];
 
     /** @var array<int,array<string,string>> entityTypeId => [restCode => title] */
     private array $fields = [];
@@ -52,7 +52,7 @@ final class ProvisionedPortal implements ClientInterface
     /** @param array<string,mixed> $schema */
     public function __construct(array $schema)
     {
-        $map = ['request' => 1292, 'envelope' => 1293, 'target' => 1294];
+        $map = ['request' => 1292, 'target' => 1294];
         foreach ($schema as $key => $spec) {
             $etid = $map[$key];
             $this->fields[$etid] = [];
@@ -100,7 +100,6 @@ $gen = (new Provisioner($portal, $schema))->discover();
 
 // entities
 check('request entity id', 1292, $gen['entities']['request']);
-check('envelope entity id', 1293, $gen['entities']['envelope']);
 check('target entity id', 1294, $gen['entities']['target']);
 
 // field discovery by title
@@ -108,12 +107,12 @@ $regionCode = $gen['fields']['request']['region'];
 check('region code discovered (not the schema key)', true, $regionCode !== 'region' && $regionCode !== '');
 check('every request field resolved', 0,
     count(array_filter($gen['fields']['request'], static fn ($c) => $c === '')));
-check('envelope committed field resolved', true, ($gen['fields']['envelope']['committed_sgd'] ?? '') !== '');
+check('target new-target field resolved', true, ($gen['fields']['target']['target_sgd'] ?? '') !== '');
 
 // stages -> full DT ids on the request category (230)
-check('finance_review stage id', 'DT1292_230:UC_FIN', $gen['stages']['finance_review']);
-check('approved stage id (mid-pipeline custom)', 'DT1292_230:UC_APPROVED', $gen['stages']['approved']);
-check('closed stage id (terminal SUCCESS)', 'DT1292_230:SUCCESS', $gen['stages']['closed']);
+check('submitted stage id', 'DT1292_230:PREPARATION', $gen['stages']['submitted']);
+check('approved stage id (custom)', 'DT1292_230:UC_APPROVED', $gen['stages']['approved']);
+check('rejected stage id', 'DT1292_230:FAIL', $gen['stages']['rejected']);
 
 echo "\n{$tests} checks, {$failures} failure(s)\n";
 exit($failures === 0 ? 0 : 1);

@@ -28,16 +28,16 @@ $myRole = $roleLabel[$user['role']] ?? $user['role'];
         <p class="muted">Nothing awaiting your approval right now.</p>
     <?php else: ?>
     <table class="grid">
-        <thead><tr><th>#</th><th>Request</th><th>Region</th><th class="num">Amount (SGD)</th><th>Budget</th><th>Gate</th><th>Action</th></tr></thead>
+        <thead><tr><th>#</th><th>Request</th><th>Region</th><th>PIC</th><th class="num">Amount (SGD)</th><th>Approver</th><th>Action</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
             <tr>
                 <td><?= e($r['id']) ?></td>
                 <td><?= e($r['title']) ?></td>
                 <td><strong><?= e($r['region']) ?></strong></td>
+                <td><?= e($r['pic']) ?></td>
                 <td class="num"><?= money_disp($r['amount']) ?></td>
-                <td><?= $r['verdict'] === 'OVER' ? '<span class="verdict-over">OVER</span>' : '<span class="verdict-within">Within</span>' ?></td>
-                <td><span class="chip"><?= $r['gate'] === 'A' ? 'HOD' : ($roleLabel[$r['required']] ?? $r['required']) ?></span></td>
+                <td><span class="chip"><?= e($roleLabel[$r['required']] ?? $r['required']) ?></span></td>
                 <td class="approve-actions">
                     <form method="post" action="<?= e($idx) ?>?screen=approvals" style="display:inline">
                         <input type="hidden" name="member_id" value="<?= e($memberId) ?>">

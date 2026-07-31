@@ -6,8 +6,8 @@ namespace Capex;
 
 use Capex\Bitrix\Auth;
 use Capex\Bitrix\Client;
+use Capex\Domain\Money;
 use Capex\Domain\Roles;
-use Capex\Repo\Envelopes;
 use Capex\Repo\Requests;
 use Capex\Repo\Targets;
 use Capex\Service\Session;
@@ -135,14 +135,17 @@ final class App
         return new Requests($this->client, (int) $this->config['entities']['request'], $this->config['fields']['request']);
     }
 
-    public function envelopes(): Envelopes
-    {
-        return new Envelopes($this->client, (int) $this->config['entities']['envelope'], $this->config['fields']['envelope']);
-    }
-
     public function targets(): Targets
     {
         return new Targets($this->client, (int) $this->config['entities']['target'], $this->config['fields']['target']);
+    }
+
+    /** Convert a local amount (cents) to SGD cents using the configured FX rate. */
+    public function toSgd(int $localCents, string $currency): int
+    {
+        $rate = (float) ($this->config['fx_rates'][$currency] ?? 1.0);
+
+        return Money::toSGD($localCents, $rate);
     }
 
     private function session(): Session

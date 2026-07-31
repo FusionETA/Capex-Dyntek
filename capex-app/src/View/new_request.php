@@ -57,6 +57,15 @@ $idx = capex_base() . '/index.php';
             </label>
         </div>
 
+        <div class="form-row">
+            <label>PIC
+                <input type="text" name="pic" value="<?= $v('pic') ?>" maxlength="120">
+            </label>
+            <label>Timeline
+                <input type="text" name="timeline" value="<?= $v('timeline') ?>" placeholder="e.g. 2026/Q3" maxlength="60">
+            </label>
+        </div>
+
         <label>Justification <span class="req">*</span>
             <textarea name="justification" rows="4" required><?= $v('justification') ?></textarea>
         </label>

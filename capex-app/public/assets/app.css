@@ -153,6 +153,12 @@ body {
 .btn-reject { background: var(--over); }
 .btn-approve:hover, .btn-reject:hover { filter: brightness(1.06); }
 
+/* ── Sales-target inline edit ────────────────────────────────────────────── */
+.t-in { font: inherit; font-size: .86rem; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px;
+    background: #fff; color: var(--ink); width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
+.t-in:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.btn-sm { padding: 6px 14px; font-size: .8rem; }
+
 /* ── Install / provisioning progress ────────────────────────────────────── */
 .capex-install { padding: 28px; max-width: 720px; margin: 0 auto; }
 .capex-log { list-style: none; padding: 0; margin: 16px 0; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }

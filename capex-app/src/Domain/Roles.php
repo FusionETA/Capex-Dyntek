@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Capex\Domain;
 
 /**
- * Role identifiers + ranking. Tokens match BudgetEngine::authorityFor() output and
- * the config authority_bands, so a band's required role can be compared directly to
- * a user's role. System Admin is deliberately un-ranked for approvals (config +
- * budget edit, but never approve — build plan §3.4).
+ * Role identifiers + ranking. Tokens match Authority::forAmount() output and the
+ * config authority_bands, so a band's required role can be compared directly to a
+ * user's role. System Admin is deliberately un-ranked for approvals.
  */
 final class Roles
 {
