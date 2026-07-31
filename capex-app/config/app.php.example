@@ -80,12 +80,21 @@ return [
         ],
     ],
 
-    // Delegation-of-authority bands in SGD cents. Placeholders — confirm before M5 (open item #1).
+    // Delegation-of-authority bands in SGD cents. Placeholders — confirm (open item #1).
+    // Used at the Finance gate: the band's role (or higher) may approve; OVER => CFO.
     'authority_bands' => [
         5_000_000    => 'HOD',        // <= 50k
         25_000_000   => 'REGIONAL_FIN',
         100_000_000  => 'COUNTRY_MD',
         // above => GROUP_CFO ; any OVER verdict => GROUP_CFO regardless of amount
+    ],
+
+    // Role assignment for in-app approvals: Bitrix user id => role token.
+    // Roles: REQUESTER (default for everyone unlisted) · HOD · REGIONAL_FIN ·
+    // COUNTRY_MD · GROUP_CFO · SYSTEM_ADMIN (no approve). See docs/permissions-runbook.md.
+    'roles' => [
+        // 144 => 'GROUP_CFO',
+        // 210 => 'HOD',
     ],
 
     'webhook_token' => 'CHANGE_ME', // shared secret verified on inbound onCrmDynamicItemUpdate

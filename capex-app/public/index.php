@@ -13,6 +13,7 @@ declare(strict_types=1);
 require __DIR__ . '/../src/Autoload.php';
 
 use Capex\App;
+use Capex\Http\Handlers\Approvals;
 use Capex\Http\Handlers\Budget;
 use Capex\Http\Handlers\Dashboard;
 use Capex\Http\Handlers\Diag;
@@ -47,8 +48,9 @@ if ($path === '/diag') {
 // User-facing screens.
 $screen = (string) ($_REQUEST['screen'] ?? 'dashboard');
 match ($screen) {
-    'budget'  => (new Budget($app))->handle(),
-    'targets' => (new Targets($app))->handle(),
-    'new'     => (new NewRequest($app))->handle(),
-    default   => (new Dashboard($app))->handle(),
+    'budget'    => (new Budget($app))->handle(),
+    'targets'   => (new Targets($app))->handle(),
+    'approvals' => (new Approvals($app))->handle(),
+    'new'       => (new NewRequest($app))->handle(),
+    default     => (new Dashboard($app))->handle(),
 };

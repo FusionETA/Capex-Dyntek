@@ -6,9 +6,11 @@ namespace Capex;
 
 use Capex\Bitrix\Auth;
 use Capex\Bitrix\Client;
+use Capex\Domain\Roles;
 use Capex\Repo\Envelopes;
 use Capex\Repo\Requests;
 use Capex\Repo\Targets;
+use Capex\Service\Session;
 
 /**
  * Tiny composition root. Loads config once and wires Auth + Client so the entry
@@ -141,6 +143,73 @@ final class App
     public function targets(): Targets
     {
         return new Targets($this->client, (int) $this->config['entities']['target'], $this->config['fields']['target']);
+    }
+
+    private function session(): Session
+    {
+        return new Session((string) ($this->config['oauth']['client_secret'] ?? ''));
+    }
+
+    /**
+     * Resolve the viewing user + their role, and a fresh signed token to carry
+     * through navigation. Identity comes from Bitrix's placement auth (AUTH_ID →
+     * user.current) on first load, then from the signed token on later requests.
+     * Anonymous (id 0, Requester, no token) when neither is present.
+     *
+     * @return array{id:int,role:string,token:string}
+     */
+    public function resolveUser(): array
+    {
+        $now = time();
+        $session = $this->session();
+
+        $tok = (string) ($_REQUEST['utok'] ?? '');
+        if ($tok !== '') {
+            $u = $session->verify($tok, $now);
+            if ($u !== null) {
+                return ['id' => $u['id'], 'role' => $u['role'], 'token' => $session->issue($u['id'], $u['role'], $now)];
+            }
+        }
+
+        $authId = (string) ($_REQUEST['AUTH_ID'] ?? '');
+        if ($authId !== '') {
+            $uid = $this->userIdFromToken($authId);
+            if ($uid > 0) {
+                $role = $this->roleFor($uid);
+                return ['id' => $uid, 'role' => $role, 'token' => $session->issue($uid, $role, $now)];
+            }
+        }
+
+        return ['id' => 0, 'role' => Roles::REQUESTER, 'token' => ''];
+    }
+
+    /** Map a Bitrix user id to a role from config; everyone else is a Requester. */
+    public function roleFor(int $userId): string
+    {
+        $role = (string) ($this->config['roles'][$userId] ?? Roles::REQUESTER);
+
+        return Roles::isValid($role) ? $role : Roles::REQUESTER;
+    }
+
+    /** Resolve a Bitrix user id from an access token via user.current. 0 on failure. */
+    private function userIdFromToken(string $accessToken): int
+    {
+        $url = sprintf('https://%s/rest/user.current', $this->config['oauth']['portal_domain']);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => http_build_query(['auth' => $accessToken]),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            return 0;
+        }
+
+        $decoded = json_decode((string) $raw, true);
+
+        return (int) ($decoded['result']['ID'] ?? 0);
     }
 
     /**

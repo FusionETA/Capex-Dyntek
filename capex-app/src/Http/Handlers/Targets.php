@@ -27,8 +27,9 @@ final class Targets
         }
 
         try {
+            $user = $this->app->resolveUser();
             $data = (new ScreenData($this->app))->targets();
-            capex_render('targets', 'Capex Targets', 'targets', $data, (string) ($_REQUEST['member_id'] ?? ''));
+            capex_render('targets', 'Capex Targets', 'targets', $data, (string) ($_REQUEST['member_id'] ?? ''), $user['token']);
         } catch (\Throwable $e) {
             capex_error($e);
         }

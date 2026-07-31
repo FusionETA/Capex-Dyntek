@@ -27,8 +27,9 @@ final class Dashboard
         }
 
         try {
+            $user = $this->app->resolveUser();
             $data = (new ScreenData($this->app))->dashboard();
-            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data, (string) ($_REQUEST['member_id'] ?? ''));
+            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data, (string) ($_REQUEST['member_id'] ?? ''), $user['token']);
         } catch (\Throwable $e) {
             capex_error($e);
         }

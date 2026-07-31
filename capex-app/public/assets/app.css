@@ -112,6 +112,14 @@ h1 { font-size: 1.4rem; margin: 0 0 4px; }
 .btn-link { color: var(--muted); text-decoration: none; }
 .btn-link:hover { color: var(--ink); }
 
+/* Approvals */
+.notice { background: rgba(47,158,68,.08); border: 1px solid rgba(47,158,68,.3); color: var(--within); padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; font-weight: 500; }
+.approve-actions form { display: flex; gap: 6px; }
+.btn-approve, .btn-reject { font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; border: 0; border-radius: 6px; padding: 5px 12px; color: #fff; }
+.btn-approve { background: var(--within); }
+.btn-reject { background: var(--over); }
+.btn-approve:hover, .btn-reject:hover { filter: brightness(1.05); }
+
 /* Install / provisioning progress */
 .capex-install { padding: 24px; max-width: 720px; margin: 0 auto; }
 .capex-log { list-style: none; padding: 0; margin: 16px 0; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }

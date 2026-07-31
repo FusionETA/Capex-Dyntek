@@ -24,6 +24,8 @@ final class NewRequest
     private const CATEGORIES   = ['IT', 'Plant & machinery', 'Building', 'Vehicle', 'Other'];
     private const CURRENCIES   = ['SGD', 'HKD', 'MYR', 'IDR'];
 
+    private string $userToken = '';
+
     public function __construct(private readonly App $app)
     {
     }
@@ -37,6 +39,8 @@ final class NewRequest
             capex_forbidden();
             return;
         }
+
+        $this->userToken = $this->app->resolveUser()['token'];
 
         try {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -60,7 +64,7 @@ final class NewRequest
             'values'       => $values,
             'errors'       => $errors,
             'memberId'     => $memberId,
-        ], $memberId);
+        ], $memberId, $this->userToken);
     }
 
     private function submit(string $memberId): void
@@ -110,6 +114,6 @@ final class NewRequest
             'id'      => $id,
             'title'   => $values['title'],
             'result'  => $result,
-        ], $memberId);
+        ], $memberId, $this->userToken);
     }
 }

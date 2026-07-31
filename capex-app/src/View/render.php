@@ -8,14 +8,16 @@ declare(strict_types=1);
  *
  * @param array<string,mixed> $data
  */
-function capex_render(string $view, string $title, string $active, array $data, string $memberId = ''): void
+function capex_render(string $view, string $title, string $active, array $data, string $memberId = '', string $userToken = ''): void
 {
     $__view   = __DIR__ . '/' . $view . '.php';
     $__title  = $title;
     $__active = $active;
-    // Bitrix only posts member_id on the initial placement load; carry it through
-    // the in-app nav so tab switches stay authenticated.
+    // Bitrix only posts member_id + AUTH_ID on the initial placement load; carry the
+    // member_id and the signed user token through the in-app nav so tab switches stay
+    // authenticated and the viewer's role is known.
     $__member = $memberId;
+    $__utok   = $userToken;
     require __DIR__ . '/layout.php';
 }
 

@@ -8,8 +8,9 @@ declare(strict_types=1);
 // Absolute base — relative asset/link paths break when Bitrix24 embeds the app.
 $__base = capex_base();
 $__idx  = $__base . '/index.php';
-// Carry member_id through nav so tab switches stay authenticated (see capex_render).
+// Carry member_id + signed user token through nav so auth + role survive tab switches.
 $__mq = ($__member ?? '') !== '' ? '&amp;member_id=' . rawurlencode($__member) : '';
+$__mq .= ($__utok ?? '') !== '' ? '&amp;utok=' . rawurlencode($__utok) : '';
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -28,6 +29,7 @@ $__mq = ($__member ?? '') !== '' ? '&amp;member_id=' . rawurlencode($__member) :
         <a href="<?= e($__idx) ?>?screen=dashboard<?= $__mq ?>" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
         <a href="<?= e($__idx) ?>?screen=budget<?= $__mq ?>" class="<?= $__active === 'budget' ? 'active' : '' ?>">Budget</a>
         <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Targets</a>
+        <a href="<?= e($__idx) ?>?screen=approvals<?= $__mq ?>" class="<?= $__active === 'approvals' ? 'active' : '' ?>">Approvals</a>
         <a href="<?= e($__idx) ?>?screen=new<?= $__mq ?>" class="nav-cta <?= $__active === 'new' ? 'active' : '' ?>">+ New request</a>
     </nav>
     <main class="capex-screen">
