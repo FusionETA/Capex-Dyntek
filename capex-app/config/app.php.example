@@ -101,12 +101,15 @@ return [
         // above => GROUP_CFO ; any OVER verdict => GROUP_CFO regardless of amount
     ],
 
-    // Role assignment for in-app approvals: Bitrix user id => role token.
-    // Roles: REQUESTER (default for everyone unlisted) · HOD · REGIONAL_FIN ·
-    // COUNTRY_MD · GROUP_CFO · SYSTEM_ADMIN (no approve). See docs/permissions-runbook.md.
-    'roles' => [
+    // Access list: Bitrix user id => role. CLOSED BY DEFAULT — anyone NOT listed
+    // cannot open the app. Roles: VIEWER (read-only) · REQUESTER (Tier 0-2, submit)
+    // · HOD · REGIONAL_FIN (approve + edit targets) · COUNTRY_MD · GROUP_CFO ·
+    // SYSTEM_ADMIN (config only). See docs/permissions-runbook.md.
+    'access' => [
         // 144 => 'GROUP_CFO',
         // 210 => 'HOD',
+        // 233 => 'REQUESTER',
+        // 240 => 'VIEWER',
     ],
 
     'webhook_token' => 'CHANGE_ME', // shared secret verified on inbound onCrmDynamicItemUpdate

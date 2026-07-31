@@ -9,11 +9,10 @@ use Capex\Domain\Money;
 
 /**
  * In-app Capex Request submission. GET renders the form; POST creates the record
- * in the Submitted stage, runs the shared budget evaluation (so the requester
- * immediately sees WITHIN/OVER), and shows a confirmation.
+ * in the Submitted stage and shows a confirmation with the routed approver.
  *
- * Any portal user may submit (Requester role). Approvals are a separate,
- * role-gated flow. Re-checks the caller server-side like every screen.
+ * Only submitters (Tier 0-2 / Requester and above) may reach this — checked
+ * server-side, so the hidden nav item isn't the only guard.
  */
 final class NewRequest
 {
@@ -24,6 +23,7 @@ final class NewRequest
     private const CURRENCIES   = ['SGD', 'HKD', 'MYR', 'IDR'];
 
     private string $userToken = '';
+    private string $userRole = '';
 
     public function __construct(private readonly App $app)
     {
@@ -39,7 +39,17 @@ final class NewRequest
             return;
         }
 
-        $this->userToken = $this->app->resolveUser()['token'];
+        $user = $this->app->resolveUser();
+        if (!\Capex\Domain\Roles::canOpen($user['role'])) {
+            capex_access_denied();
+            return;
+        }
+        if (!\Capex\Domain\Roles::canSubmit($user['role'])) {
+            capex_forbidden();
+            return;
+        }
+        $this->userToken = $user['token'];
+        $this->userRole = $user['role'];
 
         try {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -63,7 +73,7 @@ final class NewRequest
             'values'       => $values,
             'errors'       => $errors,
             'memberId'     => $memberId,
-        ], $memberId, $this->userToken);
+        ], $memberId, $this->userToken, $this->userRole);
     }
 
     private function submit(string $memberId): void
@@ -122,6 +132,6 @@ final class NewRequest
             'title'    => $values['title'],
             'amount'   => Money::format($amountSgd),
             'approver' => \Capex\Domain\Authority::forAmount($amountSgd, $this->app->config['authority_bands'] ?? []),
-        ], $memberId, $this->userToken);
+        ], $memberId, $this->userToken, $this->userRole);
     }
 }

@@ -30,6 +30,15 @@ final class Approvals
 
         try {
             $user = $this->app->resolveUser();
+            if (!\Capex\Domain\Roles::canOpen($user['role'])) {
+                capex_access_denied();
+                return;
+            }
+            if (!\Capex\Domain\Roles::canApprove($user['role'])) {
+                capex_forbidden();
+                return;
+            }
+
             $service = new ApprovalsService($this->app);
             $flash = null;
 
@@ -44,7 +53,7 @@ final class Approvals
                 'user'     => $user,
                 'flash'    => $flash,
                 'memberId' => $memberId,
-            ], $memberId, $user['token']);
+            ], $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
             capex_error($e);
         }

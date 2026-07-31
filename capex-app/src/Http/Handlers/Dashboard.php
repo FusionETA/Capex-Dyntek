@@ -21,15 +21,20 @@ final class Dashboard
     {
         require_once __DIR__ . '/../../View/render.php';
 
-        if (!$this->app->verifyCaller((string) ($_REQUEST['member_id'] ?? ''))) {
+        $memberId = (string) ($_REQUEST['member_id'] ?? '');
+        if (!$this->app->verifyCaller($memberId)) {
             capex_forbidden();
             return;
         }
 
         try {
             $user = $this->app->resolveUser();
+            if (!\Capex\Domain\Roles::canOpen($user['role'])) {
+                capex_access_denied();
+                return;
+            }
             $data = (new ScreenData($this->app))->dashboard();
-            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data, (string) ($_REQUEST['member_id'] ?? ''), $user['token']);
+            capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data, $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
             capex_error($e);
         }

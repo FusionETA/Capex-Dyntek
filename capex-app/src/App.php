@@ -183,15 +183,15 @@ final class App
             }
         }
 
-        return ['id' => 0, 'role' => Roles::REQUESTER, 'token' => ''];
+        return ['id' => 0, 'role' => Roles::NONE, 'token' => ''];
     }
 
-    /** Map a Bitrix user id to a role from config; everyone else is a Requester. */
+    /** Map a Bitrix user id to a role from the access list; unlisted users have no access. */
     public function roleFor(int $userId): string
     {
-        $role = (string) ($this->config['roles'][$userId] ?? Roles::REQUESTER);
+        $role = (string) ($this->config['access'][$userId] ?? Roles::NONE);
 
-        return Roles::isValid($role) ? $role : Roles::REQUESTER;
+        return Roles::isValid($role) ? $role : Roles::NONE;
     }
 
     /** Resolve a Bitrix user id from an access token via user.current. 0 on failure. */

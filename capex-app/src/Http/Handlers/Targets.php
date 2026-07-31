@@ -16,8 +16,6 @@ use Capex\Service\ScreenData;
  */
 final class Targets
 {
-    private const CAN_EDIT = [Roles::REGIONAL_FIN, Roles::GROUP_CFO];
-
     public function __construct(private readonly App $app)
     {
     }
@@ -34,7 +32,11 @@ final class Targets
 
         try {
             $user = $this->app->resolveUser();
-            $canEdit = in_array($user['role'], self::CAN_EDIT, true);
+            if (!Roles::canOpen($user['role'])) {
+                capex_access_denied();
+                return;
+            }
+            $canEdit = Roles::canEditTargets($user['role']);
             $flash = null;
 
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -48,7 +50,7 @@ final class Targets
             $data['flash'] = $flash;
             $data['memberId'] = $memberId;
 
-            capex_render('targets', 'Sales Targets', 'targets', $data, $memberId, $user['token']);
+            capex_render('targets', 'Sales Targets', 'targets', $data, $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
             capex_error($e);
         }

@@ -8,16 +8,17 @@ declare(strict_types=1);
  *
  * @param array<string,mixed> $data
  */
-function capex_render(string $view, string $title, string $active, array $data, string $memberId = '', string $userToken = ''): void
+function capex_render(string $view, string $title, string $active, array $data, string $memberId = '', string $userToken = '', string $userRole = ''): void
 {
     $__view   = __DIR__ . '/' . $view . '.php';
     $__title  = $title;
     $__active = $active;
     // Bitrix only posts member_id + AUTH_ID on the initial placement load; carry the
     // member_id and the signed user token through the in-app nav so tab switches stay
-    // authenticated and the viewer's role is known.
+    // authenticated and the viewer's role is known. The role drives nav visibility.
     $__member = $memberId;
     $__utok   = $userToken;
+    $__role   = $userRole;
     require __DIR__ . '/layout.php';
 }
 
@@ -70,6 +71,15 @@ function capex_forbidden(): void
     http_response_code(403);
     echo '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="' . e(capex_base()) . '/assets/app.css">'
         . '<main class="capex-screen"><div class="alert">Open this app from within Bitrix24.</div></main>';
+}
+
+/** Shown when the viewer has no assigned role — closed by default. */
+function capex_access_denied(): void
+{
+    http_response_code(403);
+    echo '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="' . e(capex_base()) . '/assets/app.css">'
+        . '<main class="capex-screen"><h1>No access</h1>'
+        . '<p class="muted">You don\'t have access to the Capex app yet. Ask your System Admin to grant you a role.</p></main>';
 }
 
 /** Friendly error page; the real reason goes to the log, not the screen. */

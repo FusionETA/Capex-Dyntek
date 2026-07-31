@@ -24,12 +24,17 @@ $__mq .= ($__utok ?? '') !== '' ? '&amp;utok=' . rawurlencode($__utok) : '';
     <script src="//api.bitrix24.com/api/v1/"></script>
 </head>
 <body>
+    <?php $__r = $__role ?? ''; ?>
     <nav class="capex-nav">
         <span class="capex-brand">Capex</span>
         <a href="<?= e($__idx) ?>?screen=dashboard<?= $__mq ?>" class="<?= $__active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
-        <a href="<?= e($__idx) ?>?screen=approvals<?= $__mq ?>" class="<?= $__active === 'approvals' ? 'active' : '' ?>">Approvals</a>
+        <?php if (\Capex\Domain\Roles::canApprove($__r)): ?>
+            <a href="<?= e($__idx) ?>?screen=approvals<?= $__mq ?>" class="<?= $__active === 'approvals' ? 'active' : '' ?>">Approvals</a>
+        <?php endif; ?>
         <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Sales Targets</a>
-        <a href="<?= e($__idx) ?>?screen=new<?= $__mq ?>" class="nav-cta <?= $__active === 'new' ? 'active' : '' ?>">+ New request</a>
+        <?php if (\Capex\Domain\Roles::canSubmit($__r)): ?>
+            <a href="<?= e($__idx) ?>?screen=new<?= $__mq ?>" class="nav-cta <?= $__active === 'new' ? 'active' : '' ?>">+ New request</a>
+        <?php endif; ?>
     </nav>
     <main class="capex-screen">
         <?php extract($data); include $__view; ?>

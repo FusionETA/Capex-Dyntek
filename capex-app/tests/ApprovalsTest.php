@@ -38,6 +38,25 @@ check('HOD cannot meet CFO gate', false, Roles::meets(Roles::HOD, Roles::GROUP_C
 check('Requester cannot approve anything', false, Roles::meets(Roles::REQUESTER, Roles::HOD));
 check('System Admin never approves', false, Roles::meets(Roles::SYSTEM_ADMIN, Roles::HOD));
 
+// ── Capabilities (closed by default) ────────────────────────────────────────
+check('unlisted user (NONE) cannot open', false, Roles::canOpen(Roles::NONE));
+check('Viewer can open', true, Roles::canOpen(Roles::VIEWER));
+check('Requester can open', true, Roles::canOpen(Roles::REQUESTER));
+
+check('Viewer cannot submit', false, Roles::canSubmit(Roles::VIEWER));
+check('Requester can submit', true, Roles::canSubmit(Roles::REQUESTER));
+check('CFO can submit', true, Roles::canSubmit(Roles::GROUP_CFO));
+check('System Admin cannot submit', false, Roles::canSubmit(Roles::SYSTEM_ADMIN));
+
+check('Requester is not an approver', false, Roles::canApprove(Roles::REQUESTER));
+check('HOD is an approver', true, Roles::canApprove(Roles::HOD));
+check('System Admin is not an approver', false, Roles::canApprove(Roles::SYSTEM_ADMIN));
+
+check('only Regional Finance/CFO edit targets — Carol yes', true, Roles::canEditTargets(Roles::REGIONAL_FIN));
+check('Group CFO edits targets', true, Roles::canEditTargets(Roles::GROUP_CFO));
+check('HOD cannot edit targets', false, Roles::canEditTargets(Roles::HOD));
+check('Country MD cannot edit targets', false, Roles::canEditTargets(Roles::COUNTRY_MD));
+
 // ── Authority::forAmount (amount bands, no budget) ──────────────────────────
 $bands = [5_000_000 => 'HOD', 25_000_000 => 'REGIONAL_FIN', 100_000_000 => 'COUNTRY_MD'];
 check('40k -> HOD', 'HOD', Authority::forAmount(4_000_000, $bands));
