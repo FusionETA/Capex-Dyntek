@@ -10,6 +10,7 @@ use Capex\Domain\Money;
 use Capex\Domain\Roles;
 use Capex\Repo\Requests;
 use Capex\Repo\Targets;
+use Capex\Service\AccessStore;
 use Capex\Service\Session;
 
 /**
@@ -26,8 +27,12 @@ final class App
         public readonly Client $client,
         public readonly string $env,
         public readonly string $generatedPath,
+        public readonly string $accessPath,
     ) {
     }
+
+    /** @var array<int,string>|null cached effective access list */
+    private ?array $access = null;
 
     /**
      * Boot for a named environment (test / prod / …). When $env is null it is
@@ -58,7 +63,7 @@ final class App
 
         $client = new Client($auth, $config['oauth']['portal_domain']);
 
-        return new self($config, $auth, $client, $env, $paths['generated']);
+        return new self($config, $auth, $client, $env, $paths['generated'], $paths['access']);
     }
 
     /**
@@ -84,7 +89,7 @@ final class App
      * otherwise the legacy single-env names (app.php / tokens.sqlite) apply, so
      * existing single-portal setups keep working.
      *
-     * @return array{config:string,generated:string,tokens:string}
+     * @return array{config:string,generated:string,tokens:string,access:string}
      */
     public static function paths(string $configDir, string $varDir, string $env): array
     {
@@ -94,6 +99,7 @@ final class App
                 'config'    => $envConfig,
                 'generated' => "{$configDir}/generated.{$env}.php",
                 'tokens'    => "{$varDir}/tokens.{$env}.sqlite",
+                'access'    => "{$varDir}/access.{$env}.json",
             ];
         }
 
@@ -101,6 +107,7 @@ final class App
             'config'    => "{$configDir}/app.php",
             'generated' => "{$configDir}/generated.php",
             'tokens'    => "{$varDir}/tokens.sqlite",
+            'access'    => "{$varDir}/access.json",
         ];
     }
 
@@ -186,10 +193,71 @@ final class App
         return ['id' => 0, 'role' => Roles::NONE, 'token' => ''];
     }
 
+    public function accessStore(): AccessStore
+    {
+        return new AccessStore($this->accessPath);
+    }
+
+    /**
+     * Active portal users for the access picker: id => "Name (email)".
+     * @return array<int,string>
+     */
+    public function portalUsers(): array
+    {
+        $out = [];
+        $start = 0;
+        do {
+            $res = $this->client->call('user.get', ['FILTER' => ['ACTIVE' => true], 'start' => $start]);
+            foreach ($res['result'] ?? [] as $u) {
+                $name = trim(((string) ($u['NAME'] ?? '')) . ' ' . ((string) ($u['LAST_NAME'] ?? '')));
+                $label = ($name !== '' ? $name : 'User') . (($u['EMAIL'] ?? '') ? ' (' . $u['EMAIL'] . ')' : '');
+                $out[(int) $u['ID']] = $label;
+            }
+            $start = $res['next'] ?? null;
+        } while ($start);
+
+        asort($out);
+
+        return $out;
+    }
+
+    /**
+     * The effective access list (userId => role). Owned by the Manage Access screen
+     * and stored in var/access.<env>.json; seeded from config['access'] the first
+     * time so bootstrap admins are never locked out.
+     *
+     * @return array<int,string>
+     */
+    public function access(): array
+    {
+        if ($this->access !== null) {
+            return $this->access;
+        }
+
+        $store = $this->accessStore();
+        if (!$store->exists()) {
+            $seed = [];
+            foreach (($this->config['access'] ?? []) as $k => $v) {
+                $seed[(int) $k] = (string) $v;
+            }
+            $store->save($seed);
+            return $this->access = $seed;
+        }
+
+        return $this->access = $store->all();
+    }
+
+    /** Persist a new effective access list and refresh the cache. @param array<int,string> $map */
+    public function saveAccess(array $map): void
+    {
+        $this->accessStore()->save($map);
+        $this->access = $map;
+    }
+
     /** Map a Bitrix user id to a role from the access list; unlisted users have no access. */
     public function roleFor(int $userId): string
     {
-        $role = (string) ($this->config['access'][$userId] ?? Roles::NONE);
+        $role = (string) ($this->access()[$userId] ?? Roles::NONE);
 
         return Roles::isValid($role) ? $role : Roles::NONE;
     }

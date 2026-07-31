@@ -57,6 +57,20 @@ check('Group CFO edits targets', true, Roles::canEditTargets(Roles::GROUP_CFO));
 check('HOD cannot edit targets', false, Roles::canEditTargets(Roles::HOD));
 check('Country MD cannot edit targets', false, Roles::canEditTargets(Roles::COUNTRY_MD));
 
+check('CFO can manage access', true, Roles::canManageAccess(Roles::GROUP_CFO));
+check('System Admin can manage access', true, Roles::canManageAccess(Roles::SYSTEM_ADMIN));
+check('HOD cannot manage access', false, Roles::canManageAccess(Roles::HOD));
+check('Regional Finance cannot manage access', false, Roles::canManageAccess(Roles::REGIONAL_FIN));
+
+// ── AccessStore round-trip ──────────────────────────────────────────────────
+$storePath = sys_get_temp_dir() . '/capex_access_' . uniqid() . '.json';
+$store = new \Capex\Service\AccessStore($storePath);
+check('store empty before save', false, $store->exists());
+$store->save([144 => Roles::GROUP_CFO, 8 => Roles::REQUESTER]);
+check('store exists after save', true, $store->exists());
+check('store round-trips a role', Roles::REQUESTER, $store->all()[8] ?? null);
+@unlink($storePath);
+
 // ── Authority::forAmount (amount bands, no budget) ──────────────────────────
 $bands = [5_000_000 => 'HOD', 25_000_000 => 'REGIONAL_FIN', 100_000_000 => 'COUNTRY_MD'];
 check('40k -> HOD', 'HOD', Authority::forAmount(4_000_000, $bands));

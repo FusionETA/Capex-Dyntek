@@ -34,6 +34,7 @@ final class Roles
 
     private const SUBMITTERS = [self::REQUESTER, self::HOD, self::REGIONAL_FIN, self::COUNTRY_MD, self::GROUP_CFO];
     private const TARGET_EDITORS = [self::REGIONAL_FIN, self::GROUP_CFO];
+    private const ACCESS_MANAGERS = [self::GROUP_CFO, self::SYSTEM_ADMIN];
 
     public static function rank(string $role): int
     {
@@ -68,6 +69,22 @@ final class Roles
     public static function canEditTargets(string $role): bool
     {
         return in_array($role, self::TARGET_EDITORS, true);
+    }
+
+    /** May the user manage the access list? (Group CFO / System Admin.) */
+    public static function canManageAccess(string $role): bool
+    {
+        return in_array($role, self::ACCESS_MANAGERS, true);
+    }
+
+    /** @return array<int,string> role token => human label */
+    public static function labels(): array
+    {
+        return [
+            self::VIEWER => 'Viewer', self::REQUESTER => 'Requester', self::HOD => 'HOD',
+            self::REGIONAL_FIN => 'Regional Finance', self::COUNTRY_MD => 'Country MD',
+            self::GROUP_CFO => 'Group CFO', self::SYSTEM_ADMIN => 'System Admin',
+        ];
     }
 
     /**
