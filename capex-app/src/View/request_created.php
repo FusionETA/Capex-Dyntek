@@ -6,6 +6,7 @@
 declare(strict_types=1);
 $idx = capex_base() . '/index.php';
 $mid = rawurlencode((string) ($_REQUEST['member_id'] ?? ''));
+$ut = rawurlencode($__utok ?? '');
 $roleLabel = [
     'HOD' => 'HOD', 'REGIONAL_FIN' => 'Regional Finance', 'COUNTRY_MD' => 'Country MD', 'GROUP_CFO' => 'Group CFO',
 ];
@@ -17,7 +18,7 @@ $roleLabel = [
     <p class="muted">It will be routed to the <strong><?= e($roleLabel[$approver] ?? $approver) ?></strong> for approval based on its amount.</p>
 
     <div class="form-actions">
-        <a href="<?= e($idx) ?>?screen=new&amp;member_id=<?= $mid ?>" class="btn-primary">Submit another</a>
-        <a href="<?= e($idx) ?>?screen=dashboard&amp;member_id=<?= $mid ?>" class="btn-link">Back to dashboard</a>
+        <a href="<?= e($idx) ?>?screen=new&amp;member_id=<?= $mid ?>&amp;utok=<?= $ut ?>" class="btn-primary">Submit another</a>
+        <a href="<?= e($idx) ?>?screen=dashboard&amp;member_id=<?= $mid ?>&amp;utok=<?= $ut ?>" class="btn-link">Back to dashboard</a>
     </div>
 </section>

@@ -19,6 +19,7 @@ $idx = capex_base() . '/index.php';
 <section class="card">
     <form method="post" action="<?= e($idx) ?>?screen=new" class="capex-form">
         <input type="hidden" name="member_id" value="<?= e($memberId) ?>">
+        <input type="hidden" name="utok" value="<?= e($__utok ?? '') ?>">
 
         <label>Title <span class="req">*</span>
             <input type="text" name="title" value="<?= $v('title') ?>" required maxlength="255">
@@ -72,7 +73,7 @@ $idx = capex_base() . '/index.php';
 
         <div class="form-actions">
             <button type="submit" class="btn-primary">Submit request</button>
-            <a href="<?= e($idx) ?>?screen=dashboard&amp;member_id=<?= rawurlencode($memberId) ?>" class="btn-link">Cancel</a>
+            <a href="<?= e($idx) ?>?screen=dashboard&amp;member_id=<?= rawurlencode($memberId) ?>&amp;utok=<?= rawurlencode($__utok ?? '') ?>" class="btn-link">Cancel</a>
         </div>
     </form>
 </section>

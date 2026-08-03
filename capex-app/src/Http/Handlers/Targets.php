@@ -49,6 +49,7 @@ final class Targets
             $data['canEdit'] = $canEdit;
             $data['flash'] = $flash;
             $data['memberId'] = $memberId;
+            $data['user'] = $user;
 
             capex_render('targets', 'Sales Targets', 'targets', $data, $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
