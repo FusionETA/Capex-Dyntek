@@ -20,7 +20,21 @@ $roleSelect = function (string $name, string $current) use ($labels): string {
 };
 ?>
 <h1>Manage Access</h1>
-<p class="muted">Grant, change or remove who can use the Capex app. Anyone not listed here has no access.</p>
+<p class="muted">Grant, change or remove who can use the Capex app. Anyone not listed here has no access.<details class="rolehelp">
+    <summary title="What the roles mean">i</summary>
+    <div class="rolehelp-pop">
+        <h4>What each role can do</h4>
+        <ul>
+            <li><b>Viewer</b> — opens the app; reads dashboard &amp; targets only.</li>
+            <li><b>Requester</b> — Tier 0–2 (MG–MS); can submit capex requests.</li>
+            <li><b>HOD</b> — Requester + approves up to <b>S$50k</b>.</li>
+            <li><b>Regional Finance</b> — approves up to <b>S$250k</b> + edits sales targets.</li>
+            <li><b>Country MD</b> — approves up to <b>S$1m</b>.</li>
+            <li><b>Group CFO</b> — approves <b>any</b> amount + manages access.</li>
+            <li><b>System Admin</b> — manages access only; no submit/approve.</li>
+        </ul>
+    </div>
+</details></p>
 
 <?php if ($flash !== null): ?>
     <div class="<?= $flash['ok'] ? 'notice' : 'alert' ?>"><?= e($flash['message']) ?></div>

@@ -153,6 +153,19 @@ body {
 .btn-reject { background: var(--over); }
 .btn-approve:hover, .btn-reject:hover { filter: brightness(1.06); }
 
+/* ── Role-guide info popover (native <details>) ──────────────────────────── */
+.rolehelp { position: relative; display: inline-block; vertical-align: middle; margin-left: 4px; }
+.rolehelp > summary { list-style: none; cursor: pointer; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--muted); color: #fff; font: italic 700 11px/18px "Georgia", serif; text-align: center; user-select: none; }
+.rolehelp > summary::-webkit-details-marker { display: none; }
+.rolehelp[open] > summary { background: var(--accent); }
+.rolehelp-pop { position: absolute; z-index: 30; top: 26px; left: 0; width: 330px; max-width: 80vw;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 34px rgba(20,20,45,.16); padding: 14px 16px; }
+.rolehelp-pop h4 { margin: 0 0 9px; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.rolehelp-pop ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: .84rem; }
+.rolehelp-pop li { color: var(--muted); line-height: 1.45; }
+.rolehelp-pop li b { color: var(--ink); }
+
 /* ── Sales-target inline edit ────────────────────────────────────────────── */
 .t-in { font: inherit; font-size: .86rem; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px;
     background: #fff; color: var(--ink); width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
