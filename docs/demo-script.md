@@ -121,6 +121,39 @@ genuinely locked down, not just hidden buttons."
 
 ---
 
+## Act 6 — Under the hood: the Bitrix records (optional, technical audience) · ~2 min
+
+Use this if the audience wants to see *where the data lives*. Skip for a purely
+business audience.
+
+**Say:** "Everything you've just seen is stored as **native Bitrix Smart Processes** —
+the app doesn't have its own database. There are just **two record types**."
+
+**Show — the Capex Request Smart Process** (CRM → Capex Request → **Kanban**):
+- "Here's the same request we raised, sitting in the **Submitted** column. The stages are the
+  workflow: **Draft → Submitted → Approved**, with **Rejected** off to the side."
+- "When we approved it in the app, it moved to the **Approved** column here — same record,
+  one source of truth. You can also drag it in the Kanban and the app stays in sync."
+- Open the record: "Every field is here — **Request code, Region, Category, Amount (local),
+  Amount (SGD), PIC, Timeline, Date of request, Date of approval, Justification**. Plus
+  Bitrix's built-in **history and comments** on every record, for audit."
+
+**Show — the Sales Target Smart Process** (CRM → Sales Target → **List**):
+- "Four records, one per region — **Region, Period, New target (Target SGD), Current met
+  (Actual SGD)**. This is exactly what Carol edits from the app's Sales Targets screen."
+
+**The three points to land:**
+1. **It's Bitrix data** — so you already know it: same permissions model, same history,
+   same search, same exports.
+2. **Two tables, not a sprawl** — Capex Request and Sales Target. That's the whole data model.
+3. **Uninstall-safe** — if you ever remove the app, these records **stay** in Bitrix. The app
+   is the workflow layer, not the storage.
+
+**Talking point:** "So there's no lock-in and no shadow database — it's your Bitrix, with a
+purpose-built capex workflow on top."
+
+---
+
 ## Closing · ~1 min
 
 Recap the value in the customer's terms:
