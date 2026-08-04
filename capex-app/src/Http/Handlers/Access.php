@@ -44,9 +44,13 @@ final class Access
             $flash = null;
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $action = (string) ($_POST['action'] ?? '');
-                $flash = $action === 'set_bands'
-                    ? $this->saveBands($_POST['band'] ?? [])
-                    : $this->apply((int) $user['id'], $action, (int) ($_POST['user_id'] ?? 0), (string) ($_POST['role'] ?? ''));
+                if ($action === 'set_bands') {
+                    $flash = $this->saveBands($_POST['band'] ?? []);
+                } elseif ($action === 'set_dept' || $action === 'remove_dept') {
+                    $flash = $this->applyDept($action, (int) ($_POST['dept_id'] ?? 0), (string) ($_POST['role'] ?? ''));
+                } else {
+                    $flash = $this->apply((int) $user['id'], $action, (int) ($_POST['user_id'] ?? 0), (string) ($_POST['role'] ?? ''));
+                }
             }
 
             $access = $this->app->access();
@@ -62,16 +66,31 @@ final class Access
             // users not yet granted access (for the add picker)
             $addable = array_diff_key($users, $access);
 
+            // department-based access (null when the app lacks the 'department' scope)
+            $departments = $this->app->departments();
+            $deptRows = [];
+            $deptAddable = [];
+            if ($departments !== null) {
+                foreach ($this->app->deptAccess() as $did => $role) {
+                    $deptRows[] = ['id' => $did, 'name' => $departments[$did] ?? ('Department #' . $did), 'role' => $role];
+                }
+                usort($deptRows, fn ($a, $b) => strcmp($a['name'], $b['name']));
+                $deptAddable = array_diff_key($departments, $this->app->deptAccess());
+            }
+
             capex_render('access', 'Manage Access', 'access', [
-                'rows'     => $rows,
-                'addable'  => $addable,
-                'labels'   => Roles::labels(),
-                'bands'    => $this->bandRows(),
-                'bandTop'  => Roles::labels()[Roles::GROUP_CFO] ?? 'Group CFO',
-                'meId'     => (int) $user['id'],
-                'flash'    => $flash,
-                'memberId' => $memberId,
-                'user'     => $user,
+                'rows'         => $rows,
+                'addable'      => $addable,
+                'labels'       => Roles::labels(),
+                'bands'        => $this->bandRows(),
+                'bandTop'      => Roles::labels()[Roles::GROUP_CFO] ?? 'Group CFO',
+                'departments'  => $departments,
+                'deptRows'     => $deptRows,
+                'deptAddable'  => $deptAddable,
+                'meId'         => (int) $user['id'],
+                'flash'        => $flash,
+                'memberId'     => $memberId,
+                'user'         => $user,
             ], $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
             capex_error($e);
@@ -138,6 +157,32 @@ final class Access
         $this->app->saveBands($pairs);
 
         return ['ok' => true, 'message' => 'Approval amount bands updated.'];
+    }
+
+    /**
+     * Grant, change or remove a department's role. Every user in that department
+     * inherits the role unless they have an explicit individual grant.
+     * @return array{ok:bool,message:string}
+     */
+    private function applyDept(string $action, int $deptId, string $role): array
+    {
+        $map = $this->app->deptAccess();
+
+        if ($action === 'remove_dept') {
+            if (!isset($map[$deptId])) {
+                return ['ok' => false, 'message' => 'That department is not on the list.'];
+            }
+            unset($map[$deptId]);
+        } else {
+            if ($deptId === 0 || !Roles::isValid($role)) {
+                return ['ok' => false, 'message' => 'Pick a department and a valid role.'];
+            }
+            $map[$deptId] = $role;
+        }
+
+        $this->app->saveDeptAccess($map);
+
+        return ['ok' => true, 'message' => $action === 'remove_dept' ? 'Department access removed.' : 'Department access saved.'];
     }
 
     /** @return array{ok:bool,message:string} */

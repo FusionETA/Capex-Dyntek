@@ -6,6 +6,9 @@
  * @var array<string,string> $labels          role token => label
  * @var array<int,array{role:string,label:string,amount:string,display:string}> $bands
  * @var string $bandTop                        label of the top (catch-all) role
+ * @var array<int,string>|null $departments    id => name, or null if no 'department' scope
+ * @var array<int,array{id:int,name:string,role:string}> $deptRows  departments with access
+ * @var array<int,string> $deptAddable         departments not yet granted (id => name)
  * @var int $meId
  * @var array{ok:bool,message:string}|null $flash
  * @var string $memberId
@@ -108,6 +111,77 @@ $money = fn (string $role): string => isset($bandBy[$role]) ? 'S$' . preg_replac
         </div>
         <div class="form-actions"><button type="submit" class="btn-primary">Grant access</button></div>
     </form>
+    <?php endif; ?>
+</section>
+
+<section class="card">
+    <h2>Department access</h2>
+    <p class="muted">Grant a role to a whole department — everyone in it inherits that role.
+        An individual grant above always overrides the department role.</p>
+    <?php if ($departments === null): ?>
+        <div class="alert">Department-based access needs the <strong>Department&nbsp;structure</strong> permission.
+            Add the <code>department</code> scope to the app in <strong>Developer resources</strong>, then reinstall — this section will light up.</div>
+    <?php else: ?>
+        <?php if ($deptRows): ?>
+        <table class="grid">
+            <thead><tr><th>Department</th><th>Role</th><th>Change</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($deptRows as $d): ?>
+                <tr>
+                    <td><strong><?= e($d['name']) ?></strong> <span class="chip">#<?= e($d['id']) ?></span></td>
+                    <td><span class="chip"><?= e($labels[$d['role']] ?? $d['role']) ?></span></td>
+                    <td>
+                        <form method="post" action="<?= e($idx) ?>?screen=access" style="display:flex;gap:6px;align-items:center">
+                            <input type="hidden" name="member_id" value="<?= e($memberId) ?>">
+                            <input type="hidden" name="utok" value="<?= e($user['token']) ?>">
+                            <input type="hidden" name="action" value="set_dept">
+                            <input type="hidden" name="dept_id" value="<?= e($d['id']) ?>">
+                            <?= $roleSelect('role', $d['role']) ?>
+                            <button type="submit" class="btn-primary btn-sm">Save</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" action="<?= e($idx) ?>?screen=access" style="display:inline">
+                            <input type="hidden" name="member_id" value="<?= e($memberId) ?>">
+                            <input type="hidden" name="utok" value="<?= e($user['token']) ?>">
+                            <input type="hidden" name="action" value="remove_dept">
+                            <input type="hidden" name="dept_id" value="<?= e($d['id']) ?>">
+                            <button type="submit" class="btn-reject btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php else: ?>
+            <p class="muted">No departments have a role yet.</p>
+        <?php endif; ?>
+
+        <?php if ($deptAddable): ?>
+        <form method="post" action="<?= e($idx) ?>?screen=access" class="capex-form" style="max-width:560px;margin-top:14px">
+            <input type="hidden" name="member_id" value="<?= e($memberId) ?>">
+            <input type="hidden" name="utok" value="<?= e($user['token']) ?>">
+            <input type="hidden" name="action" value="set_dept">
+            <div class="form-row">
+                <label>Department
+                    <select name="dept_id" required>
+                        <option value="">— pick a department —</option>
+                        <?php foreach ($deptAddable as $did => $name): ?>
+                            <option value="<?= e($did) ?>"><?= e($name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>Role
+                    <select name="role" required>
+                        <?php foreach ($labels as $token => $label): ?>
+                            <option value="<?= e($token) ?>"<?= $token === 'REQUESTER' ? ' selected' : '' ?>><?= e($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn-primary">Grant department</button></div>
+        </form>
+        <?php endif; ?>
     <?php endif; ?>
 </section>
 

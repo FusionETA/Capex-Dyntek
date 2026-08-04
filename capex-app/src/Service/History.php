@@ -40,12 +40,15 @@ final class History
                 $v = $presenter->present($item);
                 $events = $this->timeline($v);
                 $last = end($events) ?: [];
+                // Submitted date: the record's own date, else the first timeline event.
+                $first = $events[0] ?? [];
                 $rows[] = [
                     'id'        => $v['id'],
                     'title'     => $v['title'],
                     'region'    => $v['region'],
                     'amount'    => $v['amountSgd'],
                     'stage'     => $v['stage'],
+                    'submitted' => (string) ($v['dateRequest'] !== '' ? $v['dateRequest'] : ($first['ts'] ?? '')),
                     'decidedOn' => (string) ($last['ts'] ?? $v['dateApproval'] ?? ''),
                     'note'      => $v['approvalNote'] !== '' ? $v['approvalNote'] : (string) ($last['note'] ?? ''),
                 ];
@@ -109,11 +112,12 @@ final class History
             'title'         => ['title',         $before['title'],        false],
             'region'        => [$f['region']        ?? '', $before['region'],       false],
             'cost_centre'   => [$f['cost_centre']   ?? '', $before['costCentre'],   false],
-            'category'      => [$f['category']      ?? '', $before['category'],     false],
-            'currency'      => [$f['currency']      ?? '', $before['currency'],     false],
-            'justification' => [$f['justification'] ?? '', $before['justification'],false],
-            'approval_note' => [$f['approval_note'] ?? '', $before['approvalNote'], false],
-            'amount_local'  => [$f['amount_local']  ?? '', $before['amountLocal'],  true],
+            'category'       => [$f['category']       ?? '', $before['category'],     false],
+            'currency'       => [$f['currency']       ?? '', $before['currency'],     false],
+            'payback_months' => [$f['payback_months'] ?? '', $before['payback'],      false],
+            'justification'  => [$f['justification']  ?? '', $before['justification'],false],
+            'approval_note'  => [$f['approval_note']  ?? '', $before['approvalNote'], false],
+            'amount_local'   => [$f['amount_local']   ?? '', $before['amountLocal'],  true],
         ];
 
         $fields = [];

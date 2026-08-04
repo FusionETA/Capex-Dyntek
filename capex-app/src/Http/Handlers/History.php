@@ -81,7 +81,7 @@ final class History
     /** @return array<string,string> editable presenter-key => submitted value */
     private function collectEdits(): array
     {
-        $keys = ['title', 'region', 'cost_centre', 'category', 'currency', 'amount_local', 'justification', 'approval_note'];
+        $keys = ['title', 'region', 'cost_centre', 'category', 'currency', 'amount_local', 'payback_months', 'justification', 'approval_note'];
         $out = [];
         foreach ($keys as $k) {
             if (array_key_exists($k, $_POST)) {

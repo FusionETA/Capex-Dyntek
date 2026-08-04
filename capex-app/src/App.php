@@ -32,6 +32,7 @@ final class App
         public readonly string $accessPath,
         public readonly string $auditPath,
         public readonly string $bandsPath,
+        public readonly string $deptAccessPath,
     ) {
     }
 
@@ -40,6 +41,9 @@ final class App
 
     /** @var array<int,string>|null cached effective authority bands (ceiling => role) */
     private ?array $bands = null;
+
+    /** @var array<int,string>|null cached department => role access map */
+    private ?array $deptAccess = null;
 
     /**
      * Boot for a named environment (test / prod / …). When $env is null it is
@@ -70,7 +74,7 @@ final class App
 
         $client = new Client($auth, $config['oauth']['portal_domain']);
 
-        return new self($config, $auth, $client, $env, $paths['generated'], $paths['access'], $paths['audit'], $paths['bands']);
+        return new self($config, $auth, $client, $env, $paths['generated'], $paths['access'], $paths['audit'], $paths['bands'], $paths['deptAccess']);
     }
 
     /**
@@ -96,7 +100,7 @@ final class App
      * otherwise the legacy single-env names (app.php / tokens.sqlite) apply, so
      * existing single-portal setups keep working.
      *
-     * @return array{config:string,generated:string,tokens:string,access:string,audit:string,bands:string}
+     * @return array{config:string,generated:string,tokens:string,access:string,audit:string,bands:string,deptAccess:string}
      */
     public static function paths(string $configDir, string $varDir, string $env): array
     {
@@ -109,6 +113,7 @@ final class App
                 'access'    => "{$varDir}/access.{$env}.json",
                 'audit'     => "{$varDir}/audit.{$env}.json",
                 'bands'     => "{$varDir}/bands.{$env}.json",
+                'deptAccess' => "{$varDir}/dept_access.{$env}.json",
             ];
         }
 
@@ -119,6 +124,7 @@ final class App
             'access'    => "{$varDir}/access.json",
             'audit'     => "{$varDir}/audit.json",
             'bands'     => "{$varDir}/bands.json",
+            'deptAccess' => "{$varDir}/dept_access.json",
         ];
     }
 
@@ -194,9 +200,26 @@ final class App
 
         $authId = (string) ($_REQUEST['AUTH_ID'] ?? '');
         if ($authId !== '') {
-            $uid = $this->userIdFromToken($authId);
+            $cur = $this->currentUser($authId);
+            $uid = $cur['id'];
             if ($uid > 0) {
+                // Role precedence: an explicit individual grant, then the user's
+                // department grant, then (for portal admins) the auto-grant.
                 $role = $this->roleFor($uid);
+                if ($role === Roles::NONE) {
+                    $role = $this->deptRoleFor($cur['depts']);
+                }
+                // Portal administrators always have access: if an admin opens the app
+                // and isn't on the access list yet, grant them a role (default System
+                // Admin) and remember it, so they're never locked out and show up in
+                // Manage Access. An explicit list entry (any role) is respected.
+                if ($role === Roles::NONE) {
+                    $adminRole = $this->portalAdminRole();
+                    if ($adminRole !== Roles::NONE && $this->isPortalAdmin($authId)) {
+                        $role = $adminRole;
+                        $this->grantIfAbsent($uid, $role);
+                    }
+                }
                 return ['id' => $uid, 'role' => $role, 'token' => $session->issue($uid, $role, $now)];
             }
         }
@@ -327,6 +350,30 @@ final class App
         $this->access = $map;
     }
 
+    /** Add a user to the access list at the given role if they aren't already on it. */
+    public function grantIfAbsent(int $userId, string $role): void
+    {
+        $access = $this->access();
+        if (isset($access[$userId]) || !Roles::isValid($role)) {
+            return;
+        }
+        $access[$userId] = $role;
+        $this->saveAccess($access);
+    }
+
+    /**
+     * The role a portal administrator is auto-granted on first open. Defaults to
+     * System Admin (can open + manage access, but not approve/submit) — override
+     * with config['portal_admin_role']. Set config to an empty/invalid value to
+     * disable the auto-grant entirely.
+     */
+    public function portalAdminRole(): string
+    {
+        $role = (string) ($this->config['portal_admin_role'] ?? Roles::SYSTEM_ADMIN);
+
+        return Roles::isValid($role) ? $role : Roles::NONE;
+    }
+
     /** Map a Bitrix user id to a role from the access list; unlisted users have no access. */
     public function roleFor(int $userId): string
     {
@@ -335,8 +382,12 @@ final class App
         return Roles::isValid($role) ? $role : Roles::NONE;
     }
 
-    /** Resolve a Bitrix user id from an access token via user.current. 0 on failure. */
-    private function userIdFromToken(string $accessToken): int
+    /**
+     * Resolve the viewer's id + departments from their placement token via
+     * user.current. id is 0 on failure.
+     * @return array{id:int,depts:array<int,int>}
+     */
+    private function currentUser(string $accessToken): array
     {
         $url = sprintf('https://%s/rest/user.current', $this->config['oauth']['portal_domain']);
         $ch = curl_init($url);
@@ -348,12 +399,113 @@ final class App
         ]);
         $raw = curl_exec($ch);
         if ($raw === false) {
-            return 0;
+            return ['id' => 0, 'depts' => []];
+        }
+
+        $decoded = json_decode((string) $raw, true);
+        $depts = [];
+        foreach ((array) ($decoded['result']['UF_DEPARTMENT'] ?? []) as $d) {
+            $depts[] = (int) $d;
+        }
+
+        return ['id' => (int) ($decoded['result']['ID'] ?? 0), 'depts' => $depts];
+    }
+
+    /**
+     * The department => role access map, stored in var/dept_access.<env>.json and
+     * owned by the Manage Access screen; seeded once from config['dept_access'].
+     * @return array<int,string>
+     */
+    public function deptAccess(): array
+    {
+        if ($this->deptAccess !== null) {
+            return $this->deptAccess;
+        }
+
+        $store = new AccessStore($this->deptAccessPath);
+        if (!$store->exists()) {
+            $seed = [];
+            foreach (($this->config['dept_access'] ?? []) as $k => $v) {
+                $seed[(int) $k] = (string) $v;
+            }
+            $store->save($seed);
+            return $this->deptAccess = $seed;
+        }
+
+        return $this->deptAccess = $store->all();
+    }
+
+    /** Persist a new department => role map and refresh the cache. @param array<int,string> $map */
+    public function saveDeptAccess(array $map): void
+    {
+        (new AccessStore($this->deptAccessPath))->save($map);
+        $this->deptAccess = $map;
+    }
+
+    /**
+     * The role a user inherits from their departments: the most senior role mapped
+     * to any department they belong to. NONE if none of their departments is mapped.
+     * @param array<int,int> $deptIds
+     */
+    public function deptRoleFor(array $deptIds): string
+    {
+        $map = $this->deptAccess();
+        $best = Roles::NONE;
+        foreach ($deptIds as $d) {
+            $role = (string) ($map[$d] ?? Roles::NONE);
+            if (Roles::isValid($role) && ($best === Roles::NONE || Roles::rank($role) > Roles::rank($best))) {
+                $best = $role;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * The portal's departments as id => name, or null if the app lacks the
+     * 'department' OAuth scope (department-based access can't be configured then).
+     * @return array<int,string>|null
+     */
+    public function departments(): ?array
+    {
+        try {
+            $res = $this->client->call('department.get');
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($res['result'] ?? [] as $d) {
+            $out[(int) $d['ID']] = (string) ($d['NAME'] ?? ('Department #' . $d['ID']));
+        }
+        asort($out);
+
+        return $out;
+    }
+
+    /**
+     * Is the token's owner a portal administrator? Uses user.admin, which reports
+     * the admin status of the authorised user (the viewer, via their placement
+     * token). Fails closed (false) on any transport/API error.
+     */
+    private function isPortalAdmin(string $accessToken): bool
+    {
+        $url = sprintf('https://%s/rest/user.admin', $this->config['oauth']['portal_domain']);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => http_build_query(['auth' => $accessToken]),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            return false;
         }
 
         $decoded = json_decode((string) $raw, true);
 
-        return (int) ($decoded['result']['ID'] ?? 0);
+        return ($decoded['result'] ?? false) === true;
     }
 
     /**

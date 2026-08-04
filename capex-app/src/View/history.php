@@ -26,7 +26,7 @@ $day = static fn (string $ts): string => $ts === '' ? '—' : e(substr($ts, 0, 1
         <p class="muted">No approved or rejected requests yet.</p>
     <?php else: ?>
     <table class="grid">
-        <thead><tr><th>#</th><th>Request</th><th>Region</th><th class="num">Amount (SGD)</th><th>Outcome</th><th>Decided</th><th>Note</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Request</th><th>Region</th><th class="num">Amount (SGD)</th><th>Outcome</th><th>Submitted</th><th>Approved</th><th>Note</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
             <tr>
@@ -35,7 +35,8 @@ $day = static fn (string $ts): string => $ts === '' ? '—' : e(substr($ts, 0, 1
                 <td><strong><?= e($r['region']) ?></strong></td>
                 <td class="num"><?= money_disp($r['amount']) ?></td>
                 <td><span class="chip <?= $r['stage'] === 'Approved' ? 'chip-ok' : 'chip-no' ?>"><?= e($r['stage']) ?></span></td>
-                <td><?= $day($r['decidedOn']) ?></td>
+                <td><?= $day($r['submitted']) ?></td>
+                <td><?= $r['stage'] === 'Approved' ? $day($r['decidedOn']) : '—' ?></td>
                 <td class="muted"><?= e($r['note'] !== '' ? $r['note'] : '—') ?></td>
                 <td><a href="<?= e($idx) ?>?screen=history&amp;id=<?= e($r['id']) ?><?= $mq ?>" class="btn-link"><?= $canEdit ? 'Open / edit →' : 'View →' ?></a></td>
             </tr>

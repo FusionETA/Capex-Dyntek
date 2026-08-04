@@ -92,6 +92,7 @@ $eventLabel = ['submitted' => 'Submitted', 'approved' => 'Approved', 'rejected' 
                     <?php foreach ($opt['currencies'] as $o): ?><option value="<?= e($o) ?>" <?= $sel($r['currency'], $o) ?>><?= e($o) ?></option><?php endforeach; ?>
                 </select>
             </label>
+            <label>Payback (months) <input type="number" name="payback_months" value="<?= e($r['payback']) ?>" min="0" step="1"></label>
         </div>
 
         <label>Justification <textarea name="justification" rows="3"><?= e($r['justification']) ?></textarea></label>
