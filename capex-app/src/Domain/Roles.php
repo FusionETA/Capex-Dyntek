@@ -35,6 +35,7 @@ final class Roles
     private const SUBMITTERS = [self::REQUESTER, self::HOD, self::REGIONAL_FIN, self::COUNTRY_MD, self::GROUP_CFO];
     private const TARGET_EDITORS = [self::REGIONAL_FIN, self::GROUP_CFO];
     private const ACCESS_MANAGERS = [self::GROUP_CFO, self::SYSTEM_ADMIN];
+    private const HISTORY_EDITORS = [self::GROUP_CFO, self::SYSTEM_ADMIN];
 
     public static function rank(string $role): int
     {
@@ -75,6 +76,18 @@ final class Roles
     public static function canManageAccess(string $role): bool
     {
         return in_array($role, self::ACCESS_MANAGERS, true);
+    }
+
+    /** May the user see the History tab? (Any approver — HOD and above, incl. Finance.) */
+    public static function canViewHistory(string $role): bool
+    {
+        return self::rank($role) >= 1;
+    }
+
+    /** May the user edit a past request from History? (Group CFO / System Admin.) */
+    public static function canEditHistory(string $role): bool
+    {
+        return in_array($role, self::HISTORY_EDITORS, true);
     }
 
     /** @return array<int,string> role token => human label */

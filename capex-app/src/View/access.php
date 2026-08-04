@@ -4,6 +4,8 @@
  * @var array<int,array<string,mixed>> $rows   current access list
  * @var array<int,string> $addable            users not yet granted (id => label)
  * @var array<string,string> $labels          role token => label
+ * @var array<int,array{role:string,label:string,amount:string,display:string}> $bands
+ * @var string $bandTop                        label of the top (catch-all) role
  * @var int $meId
  * @var array{ok:bool,message:string}|null $flash
  * @var string $memberId
@@ -18,6 +20,10 @@ $roleSelect = function (string $name, string $current) use ($labels): string {
     }
     return $h . '</select>';
 };
+// Live band amount per role, for the role-guide popover (so it matches the editor).
+$bandBy = [];
+foreach ($bands as $b) { $bandBy[$b['role']] = $b['display']; }
+$money = fn (string $role): string => isset($bandBy[$role]) ? 'S$' . preg_replace('/\.00$/', '', money_disp($bandBy[$role])) : '—';
 ?>
 <h1>Manage Access</h1>
 <p class="muted">Grant, change or remove who can use the Capex app. Anyone not listed here has no access.<details class="rolehelp">
@@ -27,9 +33,9 @@ $roleSelect = function (string $name, string $current) use ($labels): string {
         <ul>
             <li><b>Viewer</b> — opens the app; reads dashboard &amp; targets only.</li>
             <li><b>Requester</b> — Tier 0–2 (MG–MS); can submit capex requests.</li>
-            <li><b>HOD</b> — Requester + approves up to <b>S$50k</b>.</li>
-            <li><b>Regional Finance</b> — approves up to <b>S$250k</b> + edits sales targets.</li>
-            <li><b>Country MD</b> — approves up to <b>S$1m</b>.</li>
+            <li><b>HOD</b> — Requester + approves up to <b><?= e($money('HOD')) ?></b>.</li>
+            <li><b>Regional Finance</b> — approves up to <b><?= e($money('REGIONAL_FIN')) ?></b> + edits sales targets.</li>
+            <li><b>Country MD</b> — approves up to <b><?= e($money('COUNTRY_MD')) ?></b>.</li>
             <li><b>Group CFO</b> — approves <b>any</b> amount + manages access.</li>
             <li><b>System Admin</b> — manages access only; no submit/approve.</li>
         </ul>
@@ -103,4 +109,34 @@ $roleSelect = function (string $name, string $current) use ($labels): string {
         <div class="form-actions"><button type="submit" class="btn-primary">Grant access</button></div>
     </form>
     <?php endif; ?>
+</section>
+
+<section class="card">
+    <h2>Approval amount bands</h2>
+    <p class="muted">Requests are routed to an approver by their SGD amount. Set the ceiling each role
+        can approve up to — anything above the top ceiling needs the <strong><?= e($bandTop) ?></strong>.</p>
+    <form method="post" action="<?= e($idx) ?>?screen=access" class="capex-form" style="max-width:520px">
+        <input type="hidden" name="member_id" value="<?= e($memberId) ?>">
+        <input type="hidden" name="utok" value="<?= e($user['token']) ?>">
+        <input type="hidden" name="action" value="set_bands">
+        <table class="grid bands-grid">
+            <thead><tr><th>Role</th><th class="num">Approves up to (S$)</th></tr></thead>
+            <tbody>
+            <?php foreach ($bands as $b): ?>
+                <tr>
+                    <td><span class="chip"><?= e($b['label']) ?></span></td>
+                    <td class="num">
+                        <input type="number" name="band[<?= e($b['role']) ?>]" value="<?= e($b['amount']) ?>"
+                               step="0.01" min="0" required class="t-in">
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+                <tr>
+                    <td><span class="chip"><?= e($bandTop) ?></span></td>
+                    <td class="num muted">anything higher</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save bands</button></div>
+    </form>
 </section>

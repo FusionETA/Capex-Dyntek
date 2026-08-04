@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Capex\Http\Handlers;
 
 use Capex\App;
+use Capex\Domain\Money;
 use Capex\Domain\Roles;
 
 /**
@@ -42,7 +43,10 @@ final class Access
 
             $flash = null;
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-                $flash = $this->apply((int) $user['id'], (string) ($_POST['action'] ?? ''), (int) ($_POST['user_id'] ?? 0), (string) ($_POST['role'] ?? ''));
+                $action = (string) ($_POST['action'] ?? '');
+                $flash = $action === 'set_bands'
+                    ? $this->saveBands($_POST['band'] ?? [])
+                    : $this->apply((int) $user['id'], $action, (int) ($_POST['user_id'] ?? 0), (string) ($_POST['role'] ?? ''));
             }
 
             $access = $this->app->access();
@@ -62,6 +66,8 @@ final class Access
                 'rows'     => $rows,
                 'addable'  => $addable,
                 'labels'   => Roles::labels(),
+                'bands'    => $this->bandRows(),
+                'bandTop'  => Roles::labels()[Roles::GROUP_CFO] ?? 'Group CFO',
                 'meId'     => (int) $user['id'],
                 'flash'    => $flash,
                 'memberId' => $memberId,
@@ -70,6 +76,68 @@ final class Access
         } catch (\Throwable $e) {
             capex_error($e);
         }
+    }
+
+    /**
+     * The editable amount bands for the view, ascending. Each is the ceiling below
+     * which that role approves; anything above the top ceiling goes to Group CFO.
+     * @return array<int,array{role:string,label:string,amount:string,display:string}>
+     */
+    private function bandRows(): array
+    {
+        $labels = Roles::labels();
+        $rows = [];
+        foreach ($this->app->authorityBands() as $ceiling => $role) {
+            $rows[] = [
+                'role'    => (string) $role,
+                'label'   => $labels[$role] ?? (string) $role,
+                'amount'  => Money::format((int) $ceiling),   // "50000.00" for the input value
+                'display' => Money::format((int) $ceiling),   // money_disp() groups it in the view
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Save edited amount bands. Reads one amount per current band role, keeps the
+     * role→role mapping fixed (only the amounts change), and requires the ceilings
+     * to be strictly ascending so routing stays sensible.
+     *
+     * @param mixed $posted band[<ROLE>] => amount string (SGD)
+     * @return array{ok:bool,message:string}
+     */
+    private function saveBands(mixed $posted): array
+    {
+        if (!is_array($posted)) {
+            return ['ok' => false, 'message' => 'No band values submitted.'];
+        }
+
+        $pairs = [];
+        $prev = null;
+        foreach ($this->app->authorityBands() as $role) {
+            $raw = trim((string) ($posted[$role] ?? ''));
+            if ($raw === '' || !is_numeric(str_replace([',', ' '], '', $raw))) {
+                return ['ok' => false, 'message' => 'Enter a valid amount for every band.'];
+            }
+            $cents = Money::toCents(str_replace([',', ' '], '', $raw));
+            if ($cents <= 0) {
+                return ['ok' => false, 'message' => 'Band amounts must be greater than zero.'];
+            }
+            if ($prev !== null && $cents <= $prev) {
+                return ['ok' => false, 'message' => 'Each band must be higher than the one above it (in seniority order).'];
+            }
+            $prev = $cents;
+            $pairs[] = [$cents, (string) $role];
+        }
+
+        if ($pairs === []) {
+            return ['ok' => false, 'message' => 'There are no bands to save.'];
+        }
+
+        $this->app->saveBands($pairs);
+
+        return ['ok' => true, 'message' => 'Approval amount bands updated.'];
     }
 
     /** @return array{ok:bool,message:string} */

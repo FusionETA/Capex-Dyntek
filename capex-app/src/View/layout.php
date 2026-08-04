@@ -31,6 +31,9 @@ $__mq .= ($__utok ?? '') !== '' ? '&amp;utok=' . rawurlencode($__utok) : '';
         <?php if (\Capex\Domain\Roles::canApprove($__r)): ?>
             <a href="<?= e($__idx) ?>?screen=approvals<?= $__mq ?>" class="<?= $__active === 'approvals' ? 'active' : '' ?>">Approvals</a>
         <?php endif; ?>
+        <?php if (\Capex\Domain\Roles::canViewHistory($__r)): ?>
+            <a href="<?= e($__idx) ?>?screen=history<?= $__mq ?>" class="<?= $__active === 'history' ? 'active' : '' ?>">History</a>
+        <?php endif; ?>
         <a href="<?= e($__idx) ?>?screen=targets<?= $__mq ?>" class="<?= $__active === 'targets' ? 'active' : '' ?>">Sales Targets</a>
         <?php if (\Capex\Domain\Roles::canManageAccess($__r)): ?>
             <a href="<?= e($__idx) ?>?screen=access<?= $__mq ?>" class="<?= $__active === 'access' ? 'active' : '' ?>">Manage Access</a>

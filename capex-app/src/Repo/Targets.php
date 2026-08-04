@@ -48,4 +48,18 @@ final class Targets
             'fields'       => $fields,
         ]);
     }
+
+    /**
+     * Create a Sales Target row. Returns the new item id.
+     * @param array<string,mixed> $fields keyed by real Bitrix field code
+     */
+    public function create(array $fields): int
+    {
+        $res = $this->client->call('crm.item.add', [
+            'entityTypeId' => $this->entityTypeId,
+            'fields'       => $fields,
+        ]);
+
+        return (int) ($res['result']['item']['id'] ?? 0);
+    }
 }

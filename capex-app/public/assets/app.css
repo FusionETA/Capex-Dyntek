@@ -129,6 +129,20 @@ body {
 .rank-title { flex: 1; font-weight: 500; }
 .rank-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
 
+/* ── Breakdown bars (approved by region / category) ──────────────────────── */
+.breakdown { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.breakdown li { display: flex; align-items: center; gap: 12px; }
+.bd-label { flex: 0 0 130px; font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-amt { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .86rem; min-width: 120px; text-align: right; }
+
+/* ── Monthly mini bar chart ──────────────────────────────────────────────── */
+.spark { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-top: 6px; }
+.spark-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.spark-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.spark-bar { display: block; width: 100%; min-height: 2px; background: var(--accent); border-radius: 5px 5px 0 0; }
+.spark-col:hover .spark-bar { background: var(--accent-ink); }
+.spark-lbl { color: var(--muted); font-size: .72rem; font-weight: 600; }
+
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 .capex-form { display: flex; flex-direction: column; gap: 18px; max-width: 740px; }
 .capex-form label { display: flex; flex-direction: column; gap: 5px; font-size: .82rem; color: var(--muted); font-weight: 600; }
@@ -138,7 +152,8 @@ body {
 }
 .capex-form input:focus, .capex-form select:focus, .capex-form textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 .capex-form .req { color: var(--accent); }
-.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+.form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; }
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
 .form-actions { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
 
 .btn-primary { font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 9px; background: var(--accent); color: #fff; padding: 10px 20px; }
@@ -166,11 +181,39 @@ body {
 .rolehelp-pop li { color: var(--muted); line-height: 1.45; }
 .rolehelp-pop li b { color: var(--ink); }
 
+/* ── Financial-year selector ─────────────────────────────────────────────── */
+.fy-bar { margin: 6px 0 2px; }
+.fy-form label { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--muted); font-weight: 600; }
+
 /* ── Sales-target inline edit ────────────────────────────────────────────── */
 .t-in { font: inherit; font-size: .86rem; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px;
     background: #fff; color: var(--ink); width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
 .t-in:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 .btn-sm { padding: 6px 14px; font-size: .8rem; }
+
+/* ── Chip variants (history outcome) ─────────────────────────────────────── */
+.chip-ok { background: rgba(47,158,68,.1); border-color: rgba(47,158,68,.3); color: var(--within); }
+.chip-no { background: rgba(224,72,61,.08); border-color: rgba(224,72,61,.28); color: var(--over); }
+
+/* ── Request detail (approval + history) ─────────────────────────────────── */
+.detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 4px 0 6px; }
+.detail-grid dt { color: var(--muted); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; align-self: center; }
+.detail-grid dd { margin: 0; color: var(--ink); font-weight: 500; }
+.justification { white-space: pre-wrap; line-height: 1.55; margin: 4px 0 0; }
+.card h3 { margin: 4px 0 10px; font-size: .95rem; }
+
+/* ── History timeline ────────────────────────────────────────────────────── */
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li { position: relative; padding: 0 0 16px 20px; border-left: 2px solid var(--border); }
+.timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.timeline li::before { content: ""; position: absolute; left: -7px; top: 3px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--accent); border: 2px solid var(--card); }
+.tl-type { font-weight: 700; margin-right: 8px; }
+.tl-approved { color: var(--within); }
+.tl-rejected { color: var(--over); }
+.tl-when { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.tl-who { display: block; color: var(--ink); font-size: .85rem; margin-top: 1px; }
+.tl-note { color: var(--muted); font-size: .85rem; margin-top: 3px; line-height: 1.45; }
 
 /* ── Install / provisioning progress ────────────────────────────────────── */
 .capex-install { padding: 28px; max-width: 720px; margin: 0 auto; }

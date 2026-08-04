@@ -11,6 +11,8 @@ use Capex\Domain\Roles;
 use Capex\Repo\Requests;
 use Capex\Repo\Targets;
 use Capex\Service\AccessStore;
+use Capex\Service\AuditStore;
+use Capex\Service\BandStore;
 use Capex\Service\Session;
 
 /**
@@ -28,11 +30,16 @@ final class App
         public readonly string $env,
         public readonly string $generatedPath,
         public readonly string $accessPath,
+        public readonly string $auditPath,
+        public readonly string $bandsPath,
     ) {
     }
 
     /** @var array<int,string>|null cached effective access list */
     private ?array $access = null;
+
+    /** @var array<int,string>|null cached effective authority bands (ceiling => role) */
+    private ?array $bands = null;
 
     /**
      * Boot for a named environment (test / prod / …). When $env is null it is
@@ -63,7 +70,7 @@ final class App
 
         $client = new Client($auth, $config['oauth']['portal_domain']);
 
-        return new self($config, $auth, $client, $env, $paths['generated'], $paths['access']);
+        return new self($config, $auth, $client, $env, $paths['generated'], $paths['access'], $paths['audit'], $paths['bands']);
     }
 
     /**
@@ -89,7 +96,7 @@ final class App
      * otherwise the legacy single-env names (app.php / tokens.sqlite) apply, so
      * existing single-portal setups keep working.
      *
-     * @return array{config:string,generated:string,tokens:string,access:string}
+     * @return array{config:string,generated:string,tokens:string,access:string,audit:string,bands:string}
      */
     public static function paths(string $configDir, string $varDir, string $env): array
     {
@@ -100,6 +107,8 @@ final class App
                 'generated' => "{$configDir}/generated.{$env}.php",
                 'tokens'    => "{$varDir}/tokens.{$env}.sqlite",
                 'access'    => "{$varDir}/access.{$env}.json",
+                'audit'     => "{$varDir}/audit.{$env}.json",
+                'bands'     => "{$varDir}/bands.{$env}.json",
             ];
         }
 
@@ -108,6 +117,8 @@ final class App
             'generated' => "{$configDir}/generated.php",
             'tokens'    => "{$varDir}/tokens.sqlite",
             'access'    => "{$varDir}/access.json",
+            'audit'     => "{$varDir}/audit.json",
+            'bands'     => "{$varDir}/bands.json",
         ];
     }
 
@@ -196,6 +207,68 @@ final class App
     public function accessStore(): AccessStore
     {
         return new AccessStore($this->accessPath);
+    }
+
+    public function auditStore(): AuditStore
+    {
+        return new AuditStore($this->auditPath);
+    }
+
+    public function bandStore(): BandStore
+    {
+        return new BandStore($this->bandsPath);
+    }
+
+    /**
+     * The effective delegation-of-authority bands (ceilingCents => role, ascending)
+     * used to route approvals. Owned by the Manage Access screen and stored in
+     * var/bands.<env>.json; seeded from config['authority_bands'] the first time so
+     * routing works before anyone edits it.
+     *
+     * @return array<int,string>
+     */
+    public function authorityBands(): array
+    {
+        if ($this->bands !== null) {
+            return $this->bands;
+        }
+
+        $store = $this->bandStore();
+        if (!$store->exists()) {
+            $seed = [];
+            foreach (($this->config['authority_bands'] ?? []) as $ceiling => $role) {
+                $seed[(int) $ceiling] = (string) $role;
+            }
+            $pairs = [];
+            foreach ($seed as $ceiling => $role) {
+                $pairs[] = [$ceiling, $role];
+            }
+            $store->save($pairs);
+            return $this->bands = $seed;
+        }
+
+        $map = [];
+        foreach ($store->all() as [$ceiling, $role]) {
+            $map[$ceiling] = $role;
+        }
+        ksort($map);
+
+        return $this->bands = $map;
+    }
+
+    /**
+     * Persist new authority bands and refresh the cache.
+     * @param array<int,array{0:int,1:string}> $pairs [ceilingCents, role]
+     */
+    public function saveBands(array $pairs): void
+    {
+        $this->bandStore()->save($pairs);
+        $map = [];
+        foreach ($pairs as [$ceiling, $role]) {
+            $map[(int) $ceiling] = (string) $role;
+        }
+        ksort($map);
+        $this->bands = $map;
     }
 
     /**
