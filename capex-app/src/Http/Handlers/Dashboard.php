@@ -33,7 +33,9 @@ final class Dashboard
                 capex_access_denied();
                 return;
             }
-            $data = (new ScreenData($this->app))->dashboard();
+            $data = (new ScreenData($this->app))->dashboard((string) ($_REQUEST['fy'] ?? ''));
+            $data['memberId'] = $memberId;
+            $data['user'] = $user;
             capex_render('dashboard', 'Capex Dashboard', 'dashboard', $data, $memberId, $user['token'], $user['role']);
         } catch (\Throwable $e) {
             capex_error($e);

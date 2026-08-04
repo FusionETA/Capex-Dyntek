@@ -75,7 +75,7 @@ final class Provisioner
     }
 
     /**
-     * Build semantic key => full stageId (e.g. 'finance_review' => 'DT1292_230:UC_FIN')
+     * Build semantic key => full stageId (e.g. 'approved' => 'DT1292_230:UC_APPROVED')
      * from the schema statuses and the type's default category.
      *
      * @param array<string,array<string,mixed>> $stages
@@ -115,9 +115,61 @@ final class Provisioner
             if (!empty($spec['stages'])) {
                 $stages = $this->ensureStages($entityTypeId, $spec['stages']);
             }
+            if (!empty($spec['prune_stages'])) {
+                $this->pruneStages($entityTypeId, $spec['prune_stages']);
+            }
         }
 
         return ['entities' => $entities, 'fields' => $fields, 'stages' => $stages];
+    }
+
+    /**
+     * Delete Bitrix default stages we don't use (matched by bare STATUS_ID), leaving
+     * Draft -> Submitted -> Approved (+ Rejected). Runs after ensureStages so the
+     * Approved stage exists before Closed is removed. Idempotent — a missing stage
+     * is a no-op.
+     *
+     * @param array<int,string> $statusIds bare status ids, e.g. ['CLIENT', 'SUCCESS']
+     */
+    private function pruneStages(int $entityTypeId, array $statusIds): void
+    {
+        if ($entityTypeId === 0) {
+            foreach ($statusIds as $bare) {
+                $this->note("WOULD remove default stage '{$bare}'");
+            }
+            return;
+        }
+
+        $categoryId = $this->defaultCategoryId($entityTypeId);
+        $statusEntityId = "DYNAMIC_{$entityTypeId}_STAGE_{$categoryId}";
+
+        $existing = $this->client->call('crm.status.list', [
+            'filter' => ['ENTITY_ID' => $statusEntityId],
+        ]);
+
+        // Map bare status id (suffix after the "DT..:" prefix) => numeric ID.
+        $idByStatus = [];
+        foreach ($existing['result'] ?? [] as $row) {
+            $full = (string) ($row['STATUS_ID'] ?? '');
+            $bare = str_contains($full, ':') ? substr(strrchr($full, ':'), 1) : $full;
+            $idByStatus[$bare] = $row['ID'];
+        }
+
+        foreach ($statusIds as $bare) {
+            if (!isset($idByStatus[$bare])) {
+                $this->note("stage '{$bare}' already absent");
+                continue;
+            }
+            if ($this->dryRun) {
+                $this->note("WOULD remove default stage '{$bare}'");
+                continue;
+            }
+            $this->client->call('crm.status.delete', [
+                'id'     => $idByStatus[$bare],
+                'params' => ['FORCED' => 'Y'],
+            ]);
+            $this->note("removed default stage '{$bare}'");
+        }
     }
 
     /** Find a dynamic type by title, creating it if absent. Returns its entityTypeId. */
@@ -233,7 +285,7 @@ final class Provisioner
 
     /**
      * Ensure the custom stages exist and return semantic key => full stageId
-     * (e.g. 'finance_review' => 'DT180_1:UC_FIN').
+     * (e.g. 'approved' => 'DT180_1:UC_APPROVED').
      *
      * @param array<string,array{0:string,1:string}> $stages
      * @return array<string,string>

@@ -17,6 +17,7 @@ use Capex\Http\Handlers\Access;
 use Capex\Http\Handlers\Approvals;
 use Capex\Http\Handlers\Dashboard;
 use Capex\Http\Handlers\Diag;
+use Capex\Http\Handlers\History;
 use Capex\Http\Handlers\NewRequest;
 use Capex\Http\Handlers\Targets;
 
@@ -40,6 +41,7 @@ $screen = (string) ($_REQUEST['screen'] ?? 'dashboard');
 match ($screen) {
     'targets'   => (new Targets($app))->handle(),
     'approvals' => (new Approvals($app))->handle(),
+    'history'   => (new History($app))->handle(),
     'access'    => (new Access($app))->handle(),
     'new'       => (new NewRequest($app))->handle(),
     default     => (new Dashboard($app))->handle(),

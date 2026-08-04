@@ -112,5 +112,11 @@ return [
         // 240 => 'VIEWER',
     ],
 
+    // Portal administrators always get access automatically the first time they open
+    // the app (they're added to the access list at this role, and appear in Manage
+    // Access). Default 'SYSTEM_ADMIN' = open + manage access, but not approve/submit.
+    // Use 'GROUP_CFO' to give admins full access, or '' / 'NONE' to disable entirely.
+    'portal_admin_role' => 'SYSTEM_ADMIN',
+
     'webhook_token' => 'CHANGE_ME', // shared secret verified on inbound onCrmDynamicItemUpdate
 ];

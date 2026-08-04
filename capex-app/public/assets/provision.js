@@ -139,6 +139,42 @@
         });
     }
 
+    // Delete Bitrix's default stages we don't use (matched by bare STATUS_ID), so a
+    // fresh install ends up with Draft -> Submitted -> Approved (+ Rejected). Runs
+    // AFTER ensureStages so the Approved stage already exists before Closed is removed.
+    function pruneStages(entityTypeId, statusIds) {
+        if (!statusIds || !statusIds.length) { return Promise.resolve(); }
+        return call('crm.category.list', { entityTypeId: Number(entityTypeId) }).then(function (data) {
+            var cats = (data && data.categories) || [];
+            var categoryId = cats.length ? String(cats[0].id) : '0';
+            var entityId = 'DYNAMIC_' + entityTypeId + '_STAGE_' + categoryId;
+
+            return call('crm.status.list', { filter: { ENTITY_ID: entityId } }).then(function (res) {
+                var rows = (res && res.result) || res || [];
+                // Map bare status id (suffix after the "DT..:" prefix) -> numeric ID.
+                var idByStatus = {};
+                for (var j = 0; j < rows.length; j++) {
+                    var full = String(rows[j].STATUS_ID || '');
+                    var bare = full.indexOf(':') >= 0 ? full.split(':').pop() : full;
+                    idByStatus[bare] = rows[j].ID;
+                }
+
+                var i = 0;
+                function next() {
+                    if (i >= statusIds.length) { return Promise.resolve(); }
+                    var bare = statusIds[i++];
+                    var id = idByStatus[bare];
+                    if (!id) { log('  stage already absent: ' + bare); return next(); }
+                    return call('crm.status.delete', { id: id, params: { FORCED: 'Y' } })
+                        .then(function () { log('  removed default stage: ' + bare, 'ok'); })
+                        .catch(function (e) { log('  stage not removed: ' + bare + ' — ' + e.message, 'warn'); })
+                        .then(next);
+                }
+                return next();
+            });
+        });
+    }
+
     // Bind the app's menu placements. No event binding — there is no budget recalc.
     function bindPlacementsAndEvents(requestEntityTypeId) {
         var idx = HANDLER + '/index.php';
@@ -173,6 +209,8 @@
                         if (spec.stages && Object.keys(spec.stages).length) {
                             return ensureStages(ids.entityTypeId, spec.stages);
                         }
+                    }).then(function () {
+                        return pruneStages(ids.entityTypeId, spec.prune_stages);
                     });
                 });
             });
