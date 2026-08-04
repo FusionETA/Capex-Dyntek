@@ -9,10 +9,10 @@ declare(strict_types=1);
  * (A plain config/app.php still works as a single-portal fallback.)
  * All are gitignored — they carry the client secret.
  *
- * Field codes captured here are the ONLY place field/entity codes live — no
- * string literals in logic. Entity ids + field codes are filled by provisioning
- * (bin/provision.php writes config/generated.<env>.php); leave them at 0 here.
- * See build plan §3.
+ * Entity ids, field codes and stage ids are filled by provisioning discovery
+ * (bin/provision.php writes config/generated.<env>.php, merged over this at boot);
+ * the placeholders below are documentation — leave them, discovery overrides them.
+ * There is no budget tracking: two record types only — Capex Request + Sales Target.
  */
 
 return [
@@ -22,11 +22,10 @@ return [
         'portal_domain' => 'your-portal.bitrix24.com', // reject requests from any other member_id
     ],
 
-    // Fiscal year label used on new records.
+    // Financial year the Dashboard + Sales Targets default to (calendar year).
     'current_fy' => 2026,
 
-    // FX to SGD by request currency. amountSGD = amountLocal × rate. No budget
-    // envelopes hold rates anymore, so conversion lives here.
+    // FX to SGD by request currency. amountSGD = amountLocal × rate.
     'fx_rates' => [
         'SGD' => 1.0,
         'MYR' => 0.29,
@@ -34,8 +33,9 @@ return [
         'IDR' => 0.00009,
     ],
 
-    // Corporate base target per region (SGD) — read-only reference on the targets
-    // screen; Finance edits New target + Current met (the Bitrix record).
+    // Corp target per region (SGD) — FALLBACK ONLY. Corp target now lives on each
+    // Sales Target record (per year, editable in-app); this is used only for records
+    // created before that field existed. Safe to leave at 0 for a fresh portal.
     'corp_targets' => [
         'SG' => 0, 'HK' => 0, 'MY' => 0, 'ID' => 0,
     ],
@@ -46,77 +46,75 @@ return [
         'target'  => 0, // Sales Target  entityTypeId
     ],
 
-    // Stage codes for Capex Request (single pipeline). Fill <id> with the request entityTypeId.
+    // Real pipeline: Draft → Submitted → Approved (+ Rejected). Discovered codes win.
     'stages' => [
-        'draft'          => 'DT<id>_1:NEW',
-        'submitted'      => 'DT<id>_1:PREPARATION',
-        'hod_review'     => 'DT<id>_1:CLIENT',     // Gate A
-        'finance_review' => 'DT<id>_1:UC_FIN',     // Gate B
-        'approved'       => 'DT<id>_1:SUCCESS',
-        'closed'         => 'DT<id>_1:UC_CLOSED',
-        'rejected'       => 'DT<id>_1:FAIL',
+        'draft'     => 'DT<id>_1:NEW',
+        'submitted' => 'DT<id>_1:PREPARATION',
+        'approved'  => 'DT<id>_1:UC_APPROVED',
+        'rejected'  => 'DT<id>_1:FAIL',
     ],
 
-    // Capex Request fields
+    // Field codes — filled by discovery (matched by title). Keys are the app's names.
     'fields' => [
         'request' => [
-            'req_code'         => 'ufCrm_REQ_CODE',
-            'region'           => 'ufCrm_REGION',
-            'cost_centre'      => 'ufCrm_COST_CENTRE',
-            'category'         => 'ufCrm_CATEGORY',
-            'amount_local'     => 'ufCrm_AMOUNT_LOCAL',
-            'currency'         => 'ufCrm_CURRENCY',
-            'amount_sgd'       => 'ufCrm_AMOUNT_SGD',      // app-written
-            'justification'    => 'ufCrm_JUSTIFICATION',
-            'payback_months'   => 'ufCrm_PAYBACK_MONTHS',
-            'envelope_id'      => 'ufCrm_ENVELOPE_ID',     // app-written
-            'budget_verdict'   => 'ufCrm_BUDGET_VERDICT',  // app-written: WITHIN / OVER
-            'over_by_sgd'      => 'ufCrm_OVER_BY_SGD',      // app-written
-            'reallocation_note'=> 'ufCrm_REALLOCATION_NOTE',
-            'gl_code'          => 'ufCrm_GL_CODE',
-        ],
-        'envelope' => [
-            'region'        => 'ufCrm_REGION',
-            'fy'            => 'ufCrm_FY',
-            'approved_sgd'  => 'ufCrm_APPROVED_SGD',
-            'committed_sgd' => 'ufCrm_COMMITTED_SGD', // app-written
-            'spent_sgd'     => 'ufCrm_SPENT_SGD',      // app-written
-            'fx_rate_to_sgd'=> 'ufCrm_FX_RATE_TO_SGD',
-            'status'        => 'ufCrm_STATUS',         // draft / locked
+            'req_code'       => 'ufCrm_REQ_CODE',
+            'region'         => 'ufCrm_REGION',
+            'cost_centre'    => 'ufCrm_COST_CENTRE',   // set by the approver
+            'category'       => 'ufCrm_CATEGORY',
+            'amount_local'   => 'ufCrm_AMOUNT_LOCAL',
+            'currency'       => 'ufCrm_CURRENCY',
+            'amount_sgd'     => 'ufCrm_AMOUNT_SGD',     // app-written
+            'justification'  => 'ufCrm_JUSTIFICATION',
+            'attachment'     => 'ufCrm_ATTACHMENT',     // optional file (quotation)
+            'payback_months' => 'ufCrm_PAYBACK_MONTHS',
+            'pic'            => 'ufCrm_PIC',
+            'timeline'       => 'ufCrm_TIMELINE',
+            'approval_note'  => 'ufCrm_APPROVAL_NOTE',  // approver's note, app-written
+            'date_request'   => 'ufCrm_DATE_REQUEST',   // app-written
+            'date_approval'  => 'ufCrm_DATE_APPROVAL',  // app-written
         ],
         'target' => [
-            'region'     => 'ufCrm_REGION',
-            'period'     => 'ufCrm_PERIOD',
-            'target_sgd' => 'ufCrm_TARGET_SGD',
-            'actual_sgd' => 'ufCrm_ACTUAL_SGD',
+            'region'      => 'ufCrm_REGION',
+            'period'      => 'ufCrm_PERIOD',
+            'corp_target' => 'ufCrm_CORP_TARGET',  // head-office target, per year
+            'target_sgd'  => 'ufCrm_TARGET_SGD',   // shown as "New target"
+            'actual_sgd'  => 'ufCrm_ACTUAL_SGD',   // shown as "Current met"
         ],
     ],
 
-    // Delegation-of-authority bands in SGD cents. Placeholders — confirm (open item #1).
-    // Used at the Finance gate: the band's role (or higher) may approve; OVER => CFO.
+    // Delegation-of-authority bands in SGD cents (ceiling => role, ascending); anything
+    // above the top ceiling needs the Group CFO. Seed only — editable in-app on Manage
+    // Access (stored in var/bands.<env>.json thereafter).
     'authority_bands' => [
-        5_000_000    => 'HOD',        // <= 50k
-        25_000_000   => 'REGIONAL_FIN',
-        100_000_000  => 'COUNTRY_MD',
-        // above => GROUP_CFO ; any OVER verdict => GROUP_CFO regardless of amount
+        5_000_000    => 'HOD',        // <= S$50k
+        25_000_000   => 'REGIONAL_FIN', // <= S$250k
+        100_000_000  => 'COUNTRY_MD',   // <= S$1m
+        // above => GROUP_CFO
     ],
 
-    // Access list: Bitrix user id => role. CLOSED BY DEFAULT — anyone NOT listed
-    // cannot open the app. Roles: VIEWER (read-only) · REQUESTER (Tier 0-2, submit)
-    // · HOD · REGIONAL_FIN (approve + edit targets) · COUNTRY_MD · GROUP_CFO ·
-    // SYSTEM_ADMIN (config only). See docs/permissions-runbook.md.
+    // Access SEED: bootstraps var/access.<env>.json the first time, then the live list
+    // is managed in-app (Manage Access). Keep at least one GROUP_CFO/SYSTEM_ADMIN so an
+    // admin can always get in. CLOSED BY DEFAULT — anyone not listed has no access.
+    // Roles: VIEWER · REQUESTER (submit) · HOD · REGIONAL_FIN (approve + edit targets) ·
+    // COUNTRY_MD · GROUP_CFO · SYSTEM_ADMIN (manage access only).
     'access' => [
         // 144 => 'GROUP_CFO',
         // 210 => 'HOD',
         // 233 => 'REQUESTER',
-        // 240 => 'VIEWER',
     ],
 
-    // Portal administrators always get access automatically the first time they open
-    // the app (they're added to the access list at this role, and appear in Manage
-    // Access). Default 'SYSTEM_ADMIN' = open + manage access, but not approve/submit.
-    // Use 'GROUP_CFO' to give admins full access, or '' / 'NONE' to disable entirely.
+    // Optional department SEED (Bitrix department id => role): everyone in the dept
+    // inherits the role unless they have an individual grant. Managed in-app on Manage
+    // Access (needs the 'department' OAuth scope). Stored in var/dept_access.<env>.json.
+    'dept_access' => [
+        // 5 => 'REQUESTER',    // e.g. Sales Department
+    ],
+
+    // Portal administrators are auto-granted access the first time they open the app
+    // (added to the access list at this role, and shown in Manage Access). Individual
+    // and department grants override. 'SYSTEM_ADMIN' = open + manage access only;
+    // 'GROUP_CFO' = full access; '' / 'NONE' disables the auto-grant.
     'portal_admin_role' => 'SYSTEM_ADMIN',
 
-    'webhook_token' => 'CHANGE_ME', // shared secret verified on inbound onCrmDynamicItemUpdate
+    'webhook_token' => 'CHANGE_ME', // shared secret for any inbound webhook
 ];
